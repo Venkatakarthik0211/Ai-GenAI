@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  claude:
+    build: .
+    image: claude-automation
+    container_name: claude-auto
+    environment:
+      # AWS configuration paths
+      - AWS_CONFIG_FILE=/root/.aws/config
+      - AWS_SHARED_CREDENTIALS_FILE=/root/.aws/credentials
+
+      # Optional: Pass agent ID to resume previous session
+      # Set this to resume: RESUME_AGENT_ID=abc123 docker compose up
+      - RESUME_AGENT_ID=${RESUME_AGENT_ID:-}
+
+      # Optional: Specify prompt file to use (default: MASTER_PROMPT.md)
+      # Example: PROMPT_FILE=MY_CUSTOM_PROMPT.md docker compose up
+      - PROMPT_FILE=${PROMPT_FILE:-MASTER_PROMPT.md}
+
+      # Optional: Pass prompt directly (overrides PROMPT_FILE)
+      # Example: CLAUDE_PROMPT="Generate a REST API" docker compose up
+      - CLAUDE_PROMPT=${CLAUDE_PROMPT:-}
+
+    volumes:
+      # Mount .agents directory (PROMPT.md + generated files) - READ-WRITE
+      - ./.agents:/workspace/.agents:rw
+
+      # Mount .claude directory (custom subagents) - READ-ONLY
+      - ./.claude:/workspace/.claude:ro
+
+      # Mount output directory (logs and summaries)
+      - ./output:/workspace/output:rw
+
+      # Mount AWS credentials from host (REQUIRED)
+      - ${HOME}/.aws:/root/.aws:ro
+
+      # Mount agent transcripts for resumability (REQUIRED for resume)
+      - ./transcripts:/root/.claude/transcripts:rw
+
+    restart: "no"

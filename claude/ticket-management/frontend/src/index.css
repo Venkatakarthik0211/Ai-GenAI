@@ -1,0 +1,57 @@
+/* Global Reset and Base Styles */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  line-height: 1.5;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* CSS Variables */
+:root {
+  /* Navy Colors */
+  --navy-darkest: #0a0f1a;
+  --navy-dark: #0f1729;
+  --navy-medium: #1a2332;
+  --navy-light: #2d3748;
+
+  /* Purple Colors */
+  --purple-primary: #6366f1;
+  --purple-hover: #8b5cf6;
+  --purple-light: #a78bfa;
+
+  /* Input Colors */
+  --input-bg: #1e293b;
+  --input-border: #2d3748;
+  --input-focus: #6366f1;
+
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #64748b;
+
+  /* Status Colors */
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+}

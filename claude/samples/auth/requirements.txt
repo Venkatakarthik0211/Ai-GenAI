@@ -1,0 +1,10 @@
+# JWT Token Demo Requirements
+
+# Core JWT library
+PyJWT
+
+# Cryptography support for RS256/RS512 algorithms (optional but recommended)
+cryptography
+
+# For loading environment variables (production use)
+python-dotenv

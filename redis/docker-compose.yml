@@ -1,0 +1,62 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - /tmp/redis_data:/data
+    restart: always
+    command: redis-server --requirepass Localdev@123
+    networks:
+      - app-network
+
+  mcp-server:
+    build:
+      context: ./mcp_aws_server
+      dockerfile: dockerfile.aws
+    container_name: mcp-aws-server
+    ports:
+      - "5000:5000"
+    environment:
+      - PYTHONPATH=/app
+      - AWS_DEFAULT_REGION=us-east-1
+      # Add any other environment variables your MCP server needs
+    volumes:
+      - ./mcp_aws_server:/app
+    restart: always
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  streamlit:
+    build: .
+    container_name: streamlit-app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - redis
+      - mcp-server
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Localdev@123
+      - MCP_SERVER_URL=http://mcp-server:5000
+    volumes:
+      - ./app:/app
+      - ~/.aws:/root/.aws:ro  
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis_data:

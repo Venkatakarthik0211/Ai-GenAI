@@ -1,0 +1,8 @@
+# To analyze the document using the layout mode
+
+poller = document_intelligence_client.begin_analyze_document(
+    "prebuilt-layout",
+    body=f,
+    features=[DocumentAnalysisFeature.STYLE_FONT],
+)
+

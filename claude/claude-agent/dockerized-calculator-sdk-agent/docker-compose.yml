@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  calculator:
+    build: .
+    image: calculator-agent
+    container_name: calculator-agent
+    stdin_open: true  # Enable interactive mode
+    tty: true         # Allocate a pseudo-TTY
+    environment:
+      # AWS configuration paths
+      - AWS_CONFIG_FILE=/root/.aws/config
+      - AWS_SHARED_CREDENTIALS_FILE=/root/.aws/credentials
+      - AWS_REGION=us-east-1
+      - AWS_PROFILE=default
+
+    volumes:
+      # Mount logs directory for output (READ-WRITE)
+      - ./logs:/workspace/logs:rw
+
+      # Mount AWS credentials from host (REQUIRED for Bedrock)
+      - ${HOME}/.aws:/root/.aws:ro
+
+    restart: "no"

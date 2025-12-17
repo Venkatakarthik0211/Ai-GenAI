@@ -1,0 +1,7 @@
+fastmcp
+mcp
+pyyaml
+gunicorn
+python-dotenv
+boto3
+markdownify

@@ -1,0 +1,80 @@
+# Enhanced ML Pipeline - Default Configuration
+
+# Data Configuration
+data:
+  train_path: "data/raw/train.csv"
+  target_column: "target"
+  test_size: 0.2
+  random_state: 42
+  min_samples: 100
+  max_missing_ratio: 0.3
+
+# MLflow Configuration
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "ml_pipeline_experiment"
+  enable_logging: true
+  registry_uri: null
+  artifact_root: null
+
+# AWS Bedrock Configuration
+bedrock:
+  model_id: "anthropic.claude-3-sonnet-20240229-v1:0"
+  region: "us-east-1"
+  temperature: 0.0
+  max_tokens: 4096
+  enable_agents: true
+  max_retries: 3
+  retry_delay: 2
+  timeout: 60
+
+# Hyperparameter Tuning Configuration
+tuning:
+  enable_tuning: true
+  method: "grid_search"  # Options: grid_search, random_search
+  cv_folds: 5
+  n_jobs: -1  # Use all CPU cores
+  verbose: 1
+  scoring: "accuracy"  # For classification; use 'neg_mean_squared_error' for regression
+
+# Monitoring Configuration
+monitoring:
+  enable_drift_detection: true
+  drift_threshold_p_value: 0.05
+  drift_threshold_psi: 0.2
+  enable_performance_monitoring: true
+  performance_degradation_threshold: 0.05
+
+# Retraining Configuration
+retraining:
+  enable_auto_retraining: true
+  performance_threshold: 0.1  # 10% performance drop triggers retraining
+  drift_threshold: 3  # Number of drifted features to trigger retraining
+  schedule_cron: "0 2 * * *"  # Daily at 2 AM
+
+# Algorithm Configuration
+algorithms:
+  classification_algorithms:
+    - logistic_regression
+    - random_forest
+    - gradient_boosting
+    - svm
+    - knn
+  regression_algorithms:
+    - linear_regression
+    - ridge
+    - lasso
+    - random_forest
+    - gradient_boosting
+  enable_xgboost: false
+  enable_lightgbm: false
+  enable_catboost: false
+
+# Output Configuration
+output:
+  output_dir: "outputs"
+  models_dir: "outputs/models"
+  metrics_dir: "outputs/metrics"
+  plots_dir: "outputs/plots"
+  reports_dir: "outputs/reports"
+  logs_dir: "outputs/logs"

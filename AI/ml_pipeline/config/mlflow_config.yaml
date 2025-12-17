@@ -1,0 +1,233 @@
+# MLflow Configuration for Enhanced ML Pipeline
+
+# Tracking Server Configuration
+tracking:
+  # Local tracking server
+  uri: "http://localhost:5000"
+
+  # For remote tracking server (uncomment and configure):
+  # uri: "https://your-mlflow-server.com"
+  # username: "your_username"
+  # password: "your_password"
+
+  # Backend store (where MLflow stores metadata)
+  backend_store_uri: "sqlite:///mlflow.db"
+
+  # For PostgreSQL backend (uncomment and configure):
+  # backend_store_uri: "postgresql://user:password@localhost:5432/mlflow"
+
+  # For MySQL backend (uncomment and configure):
+  # backend_store_uri: "mysql://user:password@localhost:3306/mlflow"
+
+# Artifact Storage Configuration
+artifacts:
+  # Default artifact root (local filesystem)
+  root: "mlruns"
+
+  # For S3 artifact storage (uncomment and configure):
+  # root: "s3://your-bucket-name/mlflow-artifacts"
+
+  # For Azure Blob Storage (uncomment and configure):
+  # root: "wasbs://your-container@your-account.blob.core.windows.net/mlflow-artifacts"
+
+  # For Google Cloud Storage (uncomment and configure):
+  # root: "gs://your-bucket-name/mlflow-artifacts"
+
+  # Artifact location for specific experiment
+  location: null
+
+# Experiment Configuration
+experiment:
+  name: "ml_pipeline_experiment"
+
+  # Additional experiments for different use cases
+  experiments:
+    - name: "development"
+      description: "Development and testing experiments"
+    - name: "staging"
+      description: "Staging environment experiments"
+    - name: "production"
+      description: "Production model training experiments"
+    - name: "hyperparameter_tuning"
+      description: "Focused hyperparameter optimization"
+    - name: "model_comparison"
+      description: "Algorithm comparison experiments"
+
+# Model Registry Configuration
+registry:
+  # Registry URI (defaults to tracking URI if not specified)
+  uri: null
+
+  # Model staging
+  stages:
+    - "None"
+    - "Staging"
+    - "Production"
+    - "Archived"
+
+  # Automatic model registration
+  auto_register_best_model: true
+
+  # Model naming convention
+  model_name_template: "{algorithm}_{timestamp}"
+
+# Logging Configuration
+logging:
+  # Enable/disable different types of logging
+  enable_params: true
+  enable_metrics: true
+  enable_artifacts: true
+  enable_models: true
+  enable_tags: true
+
+  # Auto-log configuration
+  autolog:
+    enable: true
+    log_models: true
+    log_input_examples: true
+    log_model_signatures: true
+    disable_for_unsupported_versions: false
+    exclusive: false
+
+  # Custom tags to add to all runs
+  default_tags:
+    team: "ml_team"
+    project: "enhanced_ml_pipeline"
+    environment: "development"
+
+# Run Configuration
+run:
+  # Nested runs for complex experiments
+  enable_nested_runs: true
+
+  # Run naming
+  run_name_template: "{algorithm}_{timestamp}"
+
+  # Automatic run management
+  auto_end_runs: true
+
+# Metrics Configuration
+metrics:
+  # Metrics to track for classification
+  classification:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - roc_auc
+    - log_loss
+    - confusion_matrix
+
+  # Metrics to track for regression
+  regression:
+    - rmse
+    - mae
+    - r2_score
+    - mse
+    - mape
+
+  # Training metrics
+  training:
+    - train_time
+    - cv_mean_score
+    - cv_std_score
+    - best_hyperparameters
+
+# Parameters to Log
+parameters:
+  # Data parameters
+  data:
+    - data_path
+    - n_samples
+    - n_features
+    - target_distribution
+
+  # Model parameters
+  model:
+    - algorithm_name
+    - hyperparameters
+    - feature_importance
+
+  # Processing parameters
+  processing:
+    - preprocessing_steps
+    - feature_engineering_steps
+    - train_test_split_ratio
+
+# Artifacts to Log
+artifacts:
+  # Model artifacts
+  models:
+    - model_file
+    - model_signature
+    - input_example
+
+  # Data artifacts
+  data:
+    - feature_importance_plot
+    - confusion_matrix_plot
+    - roc_curve_plot
+    - residual_plot
+
+  # Agent decisions
+  agents:
+    - algorithm_selection_decision
+    - model_selection_decision
+    - retraining_decision
+
+  # Reports
+  reports:
+    - evaluation_report
+    - drift_report
+    - performance_report
+
+# UI Configuration
+ui:
+  # Host and port for MLflow UI
+  host: "0.0.0.0"
+  port: 5000
+
+  # Default artifact root for UI display
+  default_artifact_root: null
+
+# Performance Configuration
+performance:
+  # Enable parallel logging
+  parallel_logging: true
+
+  # Batch size for logging metrics
+  batch_size: 100
+
+  # Timeout for logging operations (seconds)
+  timeout: 30
+
+# Integration Configuration
+integrations:
+  # Scikit-learn
+  sklearn:
+    enable_autolog: true
+
+  # XGBoost
+  xgboost:
+    enable_autolog: true
+
+  # LightGBM
+  lightgbm:
+    enable_autolog: true
+
+  # CatBoost
+  catboost:
+    enable_autolog: false
+
+# Cleanup Configuration
+cleanup:
+  # Auto-delete old runs
+  enable_auto_cleanup: false
+
+  # Keep runs for this many days
+  retention_days: 90
+
+  # Delete runs with status
+  delete_statuses:
+    - "FAILED"
+    - "KILLED"

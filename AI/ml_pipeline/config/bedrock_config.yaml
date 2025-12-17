@@ -1,0 +1,229 @@
+# AWS Bedrock Configuration for Enhanced ML Pipeline
+
+# AWS Configuration
+aws:
+  region: "us-east-1"
+  # Alternative regions with Bedrock availability:
+  # - us-west-2
+  # - ap-northeast-1
+  # - eu-central-1
+
+  # AWS profile (defaults to 'default')
+  profile: "default"
+
+  # Credentials (not recommended; use AWS CLI configure or IAM roles instead)
+  # access_key_id: null
+  # secret_access_key: null
+
+# Bedrock Model Configuration
+model:
+  # Primary model ID
+  id: "anthropic.claude-3-sonnet-20240229-v1:0"
+
+  # Available Claude models:
+  # - anthropic.claude-3-opus-20240229-v1:0    (Most capable, highest cost)
+  # - anthropic.claude-3-sonnet-20240229-v1:0  (Balanced performance and cost)
+  # - anthropic.claude-3-haiku-20240307-v1:0   (Fastest, lowest cost)
+
+  # Model parameters
+  temperature: 0.0  # 0.0 for deterministic, 1.0 for creative
+  max_tokens: 4096
+  top_p: 1.0
+  top_k: 250
+
+  # Stop sequences
+  stop_sequences: []
+
+# Agent Configuration
+agents:
+  # Global agent settings
+  enable_agents: true
+
+  # Agent 1: Algorithm Selection
+  algorithm_selection:
+    enabled: true
+    model_id: "anthropic.claude-3-sonnet-20240229-v1:0"
+    temperature: 0.0
+    max_tokens: 2048
+    prompt_template_path: "agents/prompts/algorithm_selection_prompt.txt"
+
+    # Retry configuration
+    max_retries: 3
+    retry_delay: 2  # seconds
+    timeout: 60  # seconds
+
+    # Output parsing
+    output_format: "json"
+    require_reasoning: true
+
+  # Agent 2: Model Selection
+  model_selection:
+    enabled: true
+    model_id: "anthropic.claude-3-sonnet-20240229-v1:0"
+    temperature: 0.0
+    max_tokens: 2048
+    prompt_template_path: "agents/prompts/model_selection_prompt.txt"
+
+    # Retry configuration
+    max_retries: 3
+    retry_delay: 2
+    timeout: 60
+
+    # Output parsing
+    output_format: "json"
+    require_reasoning: true
+
+  # Agent 3: Retraining Decision
+  retraining_decision:
+    enabled: true
+    model_id: "anthropic.claude-3-sonnet-20240229-v1:0"
+    temperature: 0.0
+    max_tokens: 2048
+    prompt_template_path: "agents/prompts/retraining_decision_prompt.txt"
+
+    # Retry configuration
+    max_retries: 3
+    retry_delay: 2
+    timeout: 60
+
+    # Output parsing
+    output_format: "json"
+    require_reasoning: true
+
+# Retry and Error Handling
+retry:
+  # Global retry settings
+  max_retries: 3
+  retry_delay: 2  # seconds between retries
+  exponential_backoff: true
+  backoff_multiplier: 2
+
+  # Retryable error codes
+  retryable_errors:
+    - "ThrottlingException"
+    - "ModelTimeoutException"
+    - "ServiceUnavailableException"
+    - "InternalServerException"
+
+  # Fallback behavior
+  enable_fallback: true
+  fallback_strategy: "default_decision"  # Options: default_decision, raise_error, skip
+
+# Timeout Configuration
+timeout:
+  # Request timeout (seconds)
+  request_timeout: 60
+
+  # Connection timeout (seconds)
+  connection_timeout: 10
+
+  # Read timeout (seconds)
+  read_timeout: 60
+
+# Logging Configuration
+logging:
+  # Log all agent interactions
+  enable_logging: true
+
+  # Log to MLflow
+  log_to_mlflow: true
+
+  # Save prompts and responses
+  save_prompts: true
+  save_responses: true
+
+  # Log level for Bedrock interactions
+  log_level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
+
+# Cost Management
+cost:
+  # Enable cost tracking
+  enable_tracking: true
+
+  # Cost estimates (as of 2024, subject to change)
+  pricing:
+    "anthropic.claude-3-opus-20240229-v1:0":
+      input_tokens_per_1k: 0.015
+      output_tokens_per_1k: 0.075
+    "anthropic.claude-3-sonnet-20240229-v1:0":
+      input_tokens_per_1k: 0.003
+      output_tokens_per_1k: 0.015
+    "anthropic.claude-3-haiku-20240307-v1:0":
+      input_tokens_per_1k: 0.00025
+      output_tokens_per_1k: 0.00125
+
+  # Budget alerts
+  daily_budget_usd: 100.0
+  alert_threshold_percent: 80
+
+# Performance Configuration
+performance:
+  # Batch processing
+  enable_batch_processing: false
+  batch_size: 10
+
+  # Caching
+  enable_response_caching: true
+  cache_ttl: 3600  # seconds
+
+  # Connection pooling
+  max_connections: 10
+  connection_pool_size: 5
+
+# Guardrails Configuration
+guardrails:
+  # Enable content filtering
+  enable_content_filtering: false
+
+  # Maximum input length (tokens)
+  max_input_tokens: 8192
+
+  # Maximum output length (tokens)
+  max_output_tokens: 4096
+
+  # Validate JSON output
+  validate_json_output: true
+
+  # Required JSON fields for each agent
+  required_fields:
+    algorithm_selection:
+      - selected_algorithms
+      - reasoning
+    model_selection:
+      - best_model
+      - reasoning
+    retraining_decision:
+      - should_retrain
+      - reasoning
+
+# Model-Specific Overrides
+model_overrides:
+  # Override settings for specific use cases
+  development:
+    model_id: "anthropic.claude-3-haiku-20240307-v1:0"  # Use cheaper model in dev
+    temperature: 0.1
+
+  production:
+    model_id: "anthropic.claude-3-sonnet-20240229-v1:0"
+    temperature: 0.0
+    max_retries: 5
+
+  experimentation:
+    model_id: "anthropic.claude-3-opus-20240229-v1:0"  # Use most capable model
+    temperature: 0.3
+
+# Integration Configuration
+integration:
+  # LangChain integration
+  langchain:
+    enable: true
+    streaming: false
+    callbacks: []
+
+  # MLflow integration
+  mlflow:
+    log_agent_decisions: true
+    log_prompts: true
+    log_responses: true
+    log_token_usage: true
+    log_costs: true

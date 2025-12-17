@@ -1,0 +1,13 @@
+streamlit
+redis
+pandas
+plotly
+httpx
+pyyaml
+boto3
+botocore
+# sentence-transformers
+numpy
+scikit-learn
+torch
+transformers

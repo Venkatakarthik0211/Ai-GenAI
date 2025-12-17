@@ -1,0 +1,268 @@
+# Docker Compose Configuration for Ticket Management System
+# Database Infrastructure for API Testing
+# Services: PostgreSQL, Flyway, pgAdmin
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  database:
+    build:
+      context: ./db_migrations/database
+      dockerfile: Dockerfile
+    container_name: ticket_db
+    image: ticket-management/postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ticket_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # Timezone
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persistent data storage
+      - postgres_data:/var/lib/postgresql/data
+      # Initialization scripts
+      - ./db_migrations/database/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    networks:
+      - ticket_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ticket_management"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Flyway Migration Service
+  flyway:
+    build:
+      context: ./db_migrations/flyway
+      dockerfile: Dockerfile
+    container_name: ticket_flyway
+    image: ticket-management/flyway:latest
+    restart: "no"
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://database:5432/ticket_management
+      FLYWAY_USER: postgres
+      FLYWAY_PASSWORD: postgres
+      FLYWAY_SCHEMAS: public
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_VALIDATE_ON_MIGRATE: "true"
+      FLYWAY_CLEAN_DISABLED: "true"
+      FLYWAY_CONNECT_RETRIES: 10
+      FLYWAY_CONNECT_RETRIES_INTERVAL: 5
+    volumes:
+      # Mount SQL migration scripts from db_migrations directory
+      - ./db_migrations:/flyway/sql:ro
+      # Mount Flyway configuration
+      - ./db_migrations/flyway/flyway.conf:/flyway/conf/flyway.conf:ro
+    networks:
+      - ticket_network
+    command: ["migrate"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: ./backend/auth
+      dockerfile: Dockerfile
+    container_name: ticket_auth_service
+    image: ticket-management/auth-service:latest
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    environment:
+      # Environment
+      ENVIRONMENT: development
+      DEBUG: "true"
+
+      # Database
+      DATABASE_URL: postgresql://postgres:postgres@database:5432/ticket_management
+
+      # JWT Configuration
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-change-in-production-must-be-at-least-32-chars}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+
+      # Security
+      MAX_FAILED_LOGIN_ATTEMPTS: 5
+      ACCOUNT_LOCKOUT_DURATION_MINUTES: 30
+      MAX_SESSIONS_PER_USER: 5
+
+      # Email (Optional)
+      EMAIL_VERIFICATION_REQUIRED: "false"
+
+      # Service
+      SERVICE_NAME: auth-service
+      SERVICE_VERSION: 1.0.0
+      SERVICE_PORT: 8001
+      API_V1_PREFIX: /api/v1
+
+      # Logging
+      LOG_LEVEL: INFO
+    ports:
+      - "8001:8001"
+    volumes:
+      # Mount auth service code for development
+      - ./backend/auth:/app:ro
+    networks:
+      - ticket_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Ticket Management Service
+  ticket-service:
+    build:
+      context: ./backend/ticket
+      dockerfile: Dockerfile
+    container_name: ticket_ticket_service
+    image: ticket-management/ticket-service:latest
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+      auth-service:
+        condition: service_healthy
+    environment:
+      # Environment
+      ENVIRONMENT: development
+      DEBUG: "true"
+
+      # Database
+      DATABASE_URL: postgresql://postgres:postgres@database:5432/ticket_management
+
+      # JWT Configuration (must match auth-service)
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key-change-in-production-must-be-at-least-32-chars}
+      JWT_ALGORITHM: HS256
+
+      # Auth Service Integration
+      AUTH_SERVICE_URL: http://auth-service:8001
+
+      # File Upload
+      MAX_FILE_SIZE_MB: 50
+      ALLOWED_FILE_EXTENSIONS: ".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.tar,.gz,.log"
+      UPLOAD_DIR: /app/uploads
+
+      # SLA Configuration (hours)
+      SLA_P1_RESPONSE_HOURS: 1
+      SLA_P1_RESOLUTION_HOURS: 4
+      SLA_P2_RESPONSE_HOURS: 4
+      SLA_P2_RESOLUTION_HOURS: 12
+      SLA_P3_RESPONSE_HOURS: 8
+      SLA_P3_RESOLUTION_HOURS: 48
+      SLA_P4_RESPONSE_HOURS: 24
+      SLA_P4_RESOLUTION_HOURS: 120
+
+      # Service
+      SERVICE_NAME: ticket-service
+      SERVICE_VERSION: 1.0.0
+      SERVICE_PORT: 8002
+      API_V1_PREFIX: /api/v1
+
+      # Logging
+      LOG_LEVEL: INFO
+    ports:
+      - "8002:8002"
+    volumes:
+      # Mount ticket service code for development
+      - ./backend/ticket:/app
+      # Mount uploads directory (read-write) for file attachments
+      - ticket_uploads:/app/uploads
+    networks:
+      - ticket_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8001/api/v1
+        VITE_APP_NAME: "Ticket Management System"
+        NODE_ENV: production
+    container_name: ticket_frontend
+    image: ticket-management/frontend:latest
+    restart: unless-stopped
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      ticket-service:
+        condition: service_healthy
+    environment:
+      # Nginx configuration
+      TZ: UTC
+    ports:
+      - "3000:80"
+    networks:
+      - ticket_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Named Volumes for Persistent Data
+volumes:
+  postgres_data:
+    name: ticket_postgres_data
+    driver: local
+  ticket_uploads:
+    name: ticket_uploads
+    driver: local
+
+# Custom Network for Service Communication
+networks:
+  ticket_network:
+    name: ticket_network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.0.0/16

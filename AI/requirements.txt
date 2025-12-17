@@ -1,0 +1,114 @@
+# ML Pipeline with AWS Bedrock - Main Dependencies
+# Python 3.8+
+
+# ============================================================================
+# Core ML and Data Processing
+# ============================================================================
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+scipy>=1.11.0
+
+# Preprocessing Techniques (for 28 technique implementations)
+category-encoders>=2.6.0  # For target encoding, binary encoding, hash encoding
+imbalanced-learn>=0.12.0  # For SMOTE and other imbalanced data handling
+statsmodels>=0.14.0  # For advanced statistical imputation (MICE)
+
+# ============================================================================
+# NLP and Embeddings
+# ============================================================================
+sentence-transformers>=2.2.2  # Text embeddings for semantic search
+
+# ============================================================================
+# AWS Bedrock and Cloud
+# ============================================================================
+boto3>=1.28.0
+botocore>=1.31.0
+
+# ============================================================================
+# Database
+# ============================================================================
+psycopg2-binary>=2.9.0  # PostgreSQL adapter
+pgvector>=0.2.4  # PostgreSQL vector extension
+SQLAlchemy>=2.0.0  # Optional ORM
+
+# ============================================================================
+# MLflow (Experiment Tracking)
+# ============================================================================
+mlflow>=2.8.0
+
+# ============================================================================
+# API and Web Framework
+# ============================================================================
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+python-multipart>=0.0.6  # For file uploads
+
+# ============================================================================
+# LangGraph (Workflow Orchestration)
+# ============================================================================
+langgraph>=0.0.40
+langchain>=0.1.0
+
+# ============================================================================
+# Configuration and Environment
+# ============================================================================
+python-dotenv>=1.0.0
+PyYAML>=6.0.0
+
+# ============================================================================
+# Utilities
+# ============================================================================
+requests>=2.31.0
+python-dateutil>=2.8.0
+
+# ============================================================================
+# Logging and Monitoring
+# ============================================================================
+loguru>=0.7.0  # Enhanced logging (optional, replaces standard logging)
+
+# ============================================================================
+# Development and Testing (Optional)
+# ============================================================================
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+black>=23.0.0  # Code formatting
+flake8>=6.0.0  # Linting
+mypy>=1.0.0  # Type checking
+ipython>=8.0.0  # Interactive shell
+jupyter>=1.0.0  # Notebooks
+
+# ============================================================================
+# Frontend (Streamlit) - Optional
+# ============================================================================
+# Uncomment if running Streamlit frontend locally
+# streamlit>=1.28.0
+
+# ============================================================================
+# Version Notes
+# ============================================================================
+# - All versions are minimum compatible versions
+# - Tested with Python 3.8, 3.9, 3.10, 3.11
+# - boto3 version must support bedrock-runtime service
+# - MLflow 2.8+ required for latest features
+# - FastAPI 0.104+ required for latest Pydantic v2 support
+
+# ============================================================================
+# Installation Instructions
+# ============================================================================
+#
+# Basic installation:
+#   pip install -r requirements.txt
+#
+# With development tools:
+#   pip install -r requirements.txt -r requirements-dev.txt
+#
+# With frontend:
+#   pip install -r requirements.txt -r frontend/requirements.txt
+#
+# In a virtual environment (recommended):
+#   python -m venv venv
+#   source venv/bin/activate  # On Windows: venv\Scripts\activate
+#   pip install -r requirements.txt

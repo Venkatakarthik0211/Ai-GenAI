@@ -1,0 +1,55 @@
+# Backend Dockerfile for FastAPI ML Pipeline API
+
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    git \
+    curl \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file from ml_pipeline directory
+COPY ml_pipeline/requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy all ML Pipeline code
+COPY ml_pipeline/nodes/ ./nodes/
+COPY ml_pipeline/agents/ ./agents/
+COPY ml_pipeline/database/ ./database/
+COPY ml_pipeline/utils/ ./utils/
+COPY ml_pipeline/config/ ./config/
+COPY ml_pipeline/core/ ./core/
+COPY ml_pipeline/api/ ./api/
+COPY ml_pipeline/mlflow_utils/ ./mlflow_utils/
+COPY ml_pipeline/tuning/ ./tuning/
+COPY ml_pipeline/monitoring/ ./monitoring/
+COPY ml_pipeline/retraining/ ./retraining/
+COPY ml_pipeline/scripts/ ./scripts/
+
+# Create necessary directories
+RUN mkdir -p data/raw data/processed data/external \
+    outputs/models outputs/metrics outputs/plots outputs/reports outputs/logs \
+    mlruns
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the application
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

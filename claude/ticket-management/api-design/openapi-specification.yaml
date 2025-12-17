@@ -1,0 +1,2146 @@
+openapi: 3.0.3
+info:
+  title: Ticket Management System API
+  description: |
+    Comprehensive API documentation for the DevOps Ticket Management System.
+    This system handles VM issues, infrastructure requests, and operational tasks.
+
+    **Features:**
+    - Full ticket lifecycle management (Create → Resolve → Close)
+    - SLA monitoring and auto-escalation
+    - Multi-channel notifications (Email, SMS, Slack)
+    - Role-based access control
+    - Real-time dashboard and analytics
+
+  version: 1.0.0
+  contact:
+    name: DevOps Team
+    email: devops@company.com
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.ticketmanagement.com/v1
+    description: Production server
+  - url: https://staging-api.ticketmanagement.com/v1
+    description: Staging server
+  - url: http://localhost:8000/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization endpoints
+  - name: Tickets
+    description: Ticket management operations
+  - name: Users
+    description: User management operations
+  - name: Comments
+    description: Ticket comments and discussions
+  - name: Attachments
+    description: File attachment operations
+  - name: Notifications
+    description: Notification management
+  - name: SLA
+    description: SLA policy management
+  - name: Escalations
+    description: Ticket escalation operations
+  - name: Analytics
+    description: Reports and analytics endpoints
+  - name: Admin
+    description: Administrative operations
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==================== Authentication ====================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account in the system
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and receive JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Get a new access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Invalidate current session/token
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: Retrieve authenticated user's profile information
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== Tickets ====================
+  /tickets:
+    get:
+      tags:
+        - Tickets
+      summary: List all tickets
+      description: Retrieve a paginated list of tickets with optional filters
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [NEW, OPEN, IN_PROGRESS, PENDING_INFO, RESOLVED, CLOSED, REOPENED, ESCALATED]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [P1_CRITICAL, P2_HIGH, P3_MEDIUM, P4_LOW]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [VM_ISSUE, NETWORK_ISSUE, STORAGE_ISSUE, DATABASE_ISSUE, SECURITY_ISSUE, ACCESS_REQUEST, INFRASTRUCTURE, MONITORING_ALERT, OTHER]
+        - name: assignee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: requestor_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          description: Full-text search on title and description
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, priority, status]
+            default: created_at
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Tickets retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Tickets
+      summary: Create a new ticket
+      description: Create a new ticket in the system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketCreate'
+      responses:
+        '201':
+          description: Ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /tickets/{ticket_id}:
+    get:
+      tags:
+        - Tickets
+      summary: Get ticket by ID
+      description: Retrieve detailed information about a specific ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ticket retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Tickets
+      summary: Update ticket
+      description: Update ticket information (full update)
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketUpdate'
+      responses:
+        '200':
+          description: Ticket updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags:
+        - Tickets
+      summary: Partially update ticket
+      description: Update specific fields of a ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketPatch'
+      responses:
+        '200':
+          description: Ticket updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Tickets
+      summary: Delete ticket
+      description: Soft delete a ticket (admin only)
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Ticket deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /tickets/{ticket_id}/assign:
+    put:
+      tags:
+        - Tickets
+      summary: Assign ticket to engineer
+      description: Assign or reassign a ticket to a DevOps engineer
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - assignee_id
+              properties:
+                assignee_id:
+                  type: string
+                  format: uuid
+                  description: User ID of the engineer to assign
+                notes:
+                  type: string
+                  description: Optional assignment notes
+      responses:
+        '200':
+          description: Ticket assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tickets/{ticket_id}/status:
+    patch:
+      tags:
+        - Tickets
+      summary: Update ticket status
+      description: Change the status of a ticket with validation
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [OPEN, IN_PROGRESS, PENDING_INFO, RESOLVED, CLOSED, REOPENED]
+                notes:
+                  type: string
+                  description: Status change notes
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          description: Invalid status transition
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tickets/{ticket_id}/resolve:
+    post:
+      tags:
+        - Tickets
+      summary: Mark ticket as resolved
+      description: Mark the ticket as resolved with resolution details
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - resolution
+              properties:
+                resolution:
+                  type: string
+                  description: Detailed resolution description
+                resolution_time:
+                  type: integer
+                  description: Time taken to resolve (in minutes)
+      responses:
+        '200':
+          description: Ticket marked as resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tickets/{ticket_id}/close:
+    post:
+      tags:
+        - Tickets
+      summary: Close ticket
+      description: Close the ticket after verification
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                closure_notes:
+                  type: string
+                satisfaction_rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+      responses:
+        '200':
+          description: Ticket closed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tickets/{ticket_id}/reopen:
+    post:
+      tags:
+        - Tickets
+      summary: Reopen closed ticket
+      description: Reopen a previously closed ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Reason for reopening
+      responses:
+        '200':
+          description: Ticket reopened successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          description: Cannot reopen ticket (outside reopen window or invalid state)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tickets/{ticket_id}/history:
+    get:
+      tags:
+        - Tickets
+      summary: Get ticket history
+      description: Retrieve complete history of ticket changes
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: History retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketHistory'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== Comments ====================
+  /tickets/{ticket_id}/comments:
+    get:
+      tags:
+        - Comments
+      summary: Get ticket comments
+      description: Retrieve all comments for a ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: include_internal
+          in: query
+          description: Include internal comments (requires permission)
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+        - Comments
+      summary: Add comment to ticket
+      description: Add a new comment to the ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+      responses:
+        '201':
+          description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /comments/{comment_id}:
+    put:
+      tags:
+        - Comments
+      summary: Update comment
+      description: Update an existing comment
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentUpdate'
+      responses:
+        '200':
+          description: Comment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      tags:
+        - Comments
+      summary: Delete comment
+      description: Delete a comment (soft delete)
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Comment deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ==================== Attachments ====================
+  /tickets/{ticket_id}/attachments:
+    get:
+      tags:
+        - Attachments
+      summary: List ticket attachments
+      description: Get all attachments for a ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Attachments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttachmentResponse'
+
+    post:
+      tags:
+        - Attachments
+      summary: Upload attachment
+      description: Upload a file attachment to a ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload (max 10MB)
+                description:
+                  type: string
+                  description: Optional file description
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '400':
+          description: Invalid file or file too large
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /attachments/{attachment_id}:
+    get:
+      tags:
+        - Attachments
+      summary: Download attachment
+      description: Download a specific attachment file
+      parameters:
+        - name: attachment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Attachments
+      summary: Delete attachment
+      description: Delete an attachment file
+      parameters:
+        - name: attachment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Attachment deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ==================== Users ====================
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List all users
+      description: Retrieve a list of all users (admin/manager only)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [ADMIN, DEVOPS_ENGINEER, SENIOR_ENGINEER, TEAM_LEAD, END_USER, MANAGER]
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Users
+      summary: Create new user
+      description: Create a new user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{user_id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieve user details
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: Update user information
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      tags:
+        - Users
+      summary: Deactivate user
+      description: Deactivate user account (soft delete)
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deactivated successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{user_id}/tickets:
+    get:
+      tags:
+        - Users
+      summary: Get user's tickets
+      description: Get tickets assigned to or created by a user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [assigned, created, all]
+            default: assigned
+      responses:
+        '200':
+          description: Tickets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TicketResponse'
+
+  # ==================== Escalations ====================
+  /tickets/{ticket_id}/escalate:
+    post:
+      tags:
+        - Escalations
+      summary: Escalate ticket
+      description: Manually escalate a ticket to higher level
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Reason for escalation
+                escalate_to:
+                  type: string
+                  format: uuid
+                  description: Optional specific user to escalate to
+      responses:
+        '200':
+          description: Ticket escalated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EscalationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /escalations/{escalation_id}/acknowledge:
+    post:
+      tags:
+        - Escalations
+      summary: Acknowledge escalation
+      description: Acknowledge receipt of escalated ticket
+      parameters:
+        - name: escalation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Escalation acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EscalationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== SLA ====================
+  /sla/policies:
+    get:
+      tags:
+        - SLA
+      summary: List SLA policies
+      description: Get all SLA policies
+      responses:
+        '200':
+          description: SLA policies retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SLAPolicy'
+
+    post:
+      tags:
+        - SLA
+      summary: Create SLA policy
+      description: Create a new SLA policy (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SLAPolicyCreate'
+      responses:
+        '201':
+          description: SLA policy created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAPolicy'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /sla/policies/{policy_id}:
+    get:
+      tags:
+        - SLA
+      summary: Get SLA policy
+      description: Get specific SLA policy details
+      parameters:
+        - name: policy_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: SLA policy retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAPolicy'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - SLA
+      summary: Update SLA policy
+      description: Update an existing SLA policy
+      parameters:
+        - name: policy_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SLAPolicyUpdate'
+      responses:
+        '200':
+          description: SLA policy updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAPolicy'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /sla/breaches:
+    get:
+      tags:
+        - SLA
+      summary: Get SLA breaches
+      description: Get list of tickets with SLA breaches
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: SLA breaches retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SLABreachResponse'
+
+  # ==================== Notifications ====================
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Get user notifications
+      description: Retrieve notifications for current user
+      parameters:
+        - name: read
+          in: query
+          schema:
+            type: boolean
+          description: Filter by read/unread status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Notifications retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationResponse'
+
+  /notifications/{notification_id}/read:
+    post:
+      tags:
+        - Notifications
+      summary: Mark notification as read
+      description: Mark a specific notification as read
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Notification marked as read
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/read-all:
+    post:
+      tags:
+        - Notifications
+      summary: Mark all as read
+      description: Mark all user notifications as read
+      responses:
+        '200':
+          description: All notifications marked as read
+
+  # ==================== Analytics ====================
+  /analytics/dashboard:
+    get:
+      tags:
+        - Analytics
+      summary: Get dashboard metrics
+      description: Retrieve dashboard statistics and metrics
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Dashboard metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardMetrics'
+
+  /analytics/tickets/metrics:
+    get:
+      tags:
+        - Analytics
+      summary: Get ticket metrics
+      description: Get detailed ticket statistics
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [status, priority, category, assignee]
+      responses:
+        '200':
+          description: Ticket metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMetrics'
+
+  /analytics/users/performance:
+    get:
+      tags:
+        - Analytics
+      summary: Get user performance metrics
+      description: Get engineer performance statistics
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Performance metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPerformanceMetrics'
+
+  /analytics/sla/compliance:
+    get:
+      tags:
+        - Analytics
+      summary: Get SLA compliance report
+      description: Get SLA compliance statistics
+      parameters:
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: SLA compliance data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLAComplianceReport'
+
+  /analytics/reports/export:
+    get:
+      tags:
+        - Analytics
+      summary: Export report
+      description: Export analytics report to PDF or Excel
+      parameters:
+        - name: report_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [tickets, performance, sla, audit]
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [pdf, excel]
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Report exported
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  # ==================== Admin ====================
+  /admin/settings:
+    get:
+      tags:
+        - Admin
+      summary: Get system settings
+      description: Retrieve system configuration settings
+      responses:
+        '200':
+          description: Settings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    put:
+      tags:
+        - Admin
+      summary: Update system settings
+      description: Update system configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettings'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/audit-logs:
+    get:
+      tags:
+        - Admin
+      summary: Get audit logs
+      description: Retrieve system audit logs
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Audit logs retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+# ==================== Components ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # Authentication Schemas
+    UserRegistration:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - first_name
+        - last_name
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone_number:
+          type: string
+        department:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: Bearer
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    # User Schemas
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, DEVOPS_ENGINEER, SENIOR_ENGINEER, TEAM_LEAD, END_USER, MANAGER]
+        department:
+          type: string
+        phone_number:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+
+    UserCreate:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - role
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, DEVOPS_ENGINEER, SENIOR_ENGINEER, TEAM_LEAD, END_USER, MANAGER]
+        department:
+          type: string
+        phone_number:
+          type: string
+
+    UserUpdate:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone_number:
+          type: string
+        department:
+          type: string
+        is_active:
+          type: boolean
+
+    # Ticket Schemas
+    TicketCreate:
+      type: object
+      required:
+        - title
+        - description
+        - category
+        - priority
+      properties:
+        title:
+          type: string
+          minLength: 5
+          maxLength: 200
+        description:
+          type: string
+          minLength: 10
+        category:
+          type: string
+          enum: [VM_ISSUE, NETWORK_ISSUE, STORAGE_ISSUE, DATABASE_ISSUE, SECURITY_ISSUE, ACCESS_REQUEST, INFRASTRUCTURE, MONITORING_ALERT, OTHER]
+        priority:
+          type: string
+          enum: [P1_CRITICAL, P2_HIGH, P3_MEDIUM, P4_LOW]
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata as JSON
+
+    TicketUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [VM_ISSUE, NETWORK_ISSUE, STORAGE_ISSUE, DATABASE_ISSUE, SECURITY_ISSUE, ACCESS_REQUEST, INFRASTRUCTURE, MONITORING_ALERT, OTHER]
+        priority:
+          type: string
+          enum: [P1_CRITICAL, P2_HIGH, P3_MEDIUM, P4_LOW]
+        tags:
+          type: array
+          items:
+            type: string
+
+    TicketPatch:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [P1_CRITICAL, P2_HIGH, P3_MEDIUM, P4_LOW]
+
+    TicketResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_number:
+          type: string
+          example: "TKT-2024-00001"
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        requestor:
+          $ref: '#/components/schemas/UserResponse'
+        assignee:
+          $ref: '#/components/schemas/UserResponse'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: string
+          format: date-time
+        due_date:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        sla_policy:
+          $ref: '#/components/schemas/SLAPolicy'
+        metadata:
+          type: object
+
+    TicketDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/TicketResponse'
+        - type: object
+          properties:
+            comments:
+              type: array
+              items:
+                $ref: '#/components/schemas/CommentResponse'
+            attachments:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttachmentResponse'
+            history:
+              type: array
+              items:
+                $ref: '#/components/schemas/TicketHistory'
+            escalations:
+              type: array
+              items:
+                $ref: '#/components/schemas/EscalationResponse'
+
+    TicketListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        total_pages:
+          type: integer
+        tickets:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketResponse'
+
+    TicketHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        action:
+          type: string
+        field_changed:
+          type: string
+        old_value:
+          type: string
+        new_value:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # Comment Schemas
+    CommentCreate:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+        is_internal:
+          type: boolean
+          default: false
+
+    CommentUpdate:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+
+    CommentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        content:
+          type: string
+        is_internal:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentResponse'
+
+    # Attachment Schemas
+    AttachmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        file_name:
+          type: string
+        file_type:
+          type: string
+        file_size:
+          type: integer
+          description: File size in bytes
+        file_path:
+          type: string
+        download_url:
+          type: string
+        uploaded_by:
+          $ref: '#/components/schemas/UserResponse'
+        uploaded_at:
+          type: string
+          format: date-time
+
+    # SLA Schemas
+    SLAPolicy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        priority:
+          type: string
+          enum: [P1_CRITICAL, P2_HIGH, P3_MEDIUM, P4_LOW]
+        category:
+          type: string
+        response_time:
+          type: integer
+          description: Response time in minutes
+        resolution_time:
+          type: integer
+          description: Resolution time in hours
+        escalation_threshold:
+          type: integer
+          description: Time before auto-escalation in minutes
+        is_active:
+          type: boolean
+
+    SLAPolicyCreate:
+      type: object
+      required:
+        - name
+        - priority
+        - response_time
+        - resolution_time
+      properties:
+        name:
+          type: string
+        priority:
+          type: string
+          enum: [P1_CRITICAL, P2_HIGH, P3_MEDIUM, P4_LOW]
+        category:
+          type: string
+        response_time:
+          type: integer
+        resolution_time:
+          type: integer
+        escalation_threshold:
+          type: integer
+
+    SLAPolicyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        response_time:
+          type: integer
+        resolution_time:
+          type: integer
+        escalation_threshold:
+          type: integer
+        is_active:
+          type: boolean
+
+    SLABreachResponse:
+      type: object
+      properties:
+        ticket:
+          $ref: '#/components/schemas/TicketResponse'
+        breach_type:
+          type: string
+          enum: [RESPONSE, RESOLUTION]
+        breach_time:
+          type: string
+          format: date-time
+        time_overdue:
+          type: integer
+          description: Time overdue in minutes
+
+    # Escalation Schemas
+    EscalationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_id:
+          type: string
+          format: uuid
+        from_user:
+          $ref: '#/components/schemas/UserResponse'
+        to_user:
+          $ref: '#/components/schemas/UserResponse'
+        reason:
+          type: string
+        level:
+          type: integer
+        escalated_at:
+          type: string
+          format: date-time
+        acknowledged_at:
+          type: string
+          format: date-time
+
+    # Notification Schemas
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        ticket_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [TICKET_CREATED, TICKET_ASSIGNED, STATUS_CHANGED, COMMENT_ADDED, ESCALATED, SLA_BREACH, RESOLUTION_REQUEST]
+        channel:
+          type: string
+          enum: [EMAIL, SMS, IN_APP, SLACK]
+        message:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, SENT, FAILED]
+        sent_at:
+          type: string
+          format: date-time
+        read_at:
+          type: string
+          format: date-time
+
+    # Analytics Schemas
+    DashboardMetrics:
+      type: object
+      properties:
+        total_tickets:
+          type: integer
+        open_tickets:
+          type: integer
+        in_progress_tickets:
+          type: integer
+        resolved_today:
+          type: integer
+        avg_resolution_time:
+          type: number
+          description: Average resolution time in hours
+        sla_compliance_rate:
+          type: number
+          description: SLA compliance percentage
+        tickets_by_priority:
+          type: object
+          properties:
+            P1:
+              type: integer
+            P2:
+              type: integer
+            P3:
+              type: integer
+            P4:
+              type: integer
+        tickets_by_category:
+          type: object
+          additionalProperties:
+            type: integer
+        recent_tickets:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketResponse'
+
+    TicketMetrics:
+      type: object
+      properties:
+        total_tickets:
+          type: integer
+        tickets_by_status:
+          type: object
+          additionalProperties:
+            type: integer
+        tickets_by_priority:
+          type: object
+          additionalProperties:
+            type: integer
+        tickets_by_category:
+          type: object
+          additionalProperties:
+            type: integer
+        avg_resolution_time:
+          type: number
+        median_resolution_time:
+          type: number
+        reopen_rate:
+          type: number
+        escalation_rate:
+          type: number
+
+    UserPerformanceMetrics:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        tickets_assigned:
+          type: integer
+        tickets_resolved:
+          type: integer
+        avg_resolution_time:
+          type: number
+        sla_compliance_rate:
+          type: number
+        customer_satisfaction:
+          type: number
+        tickets_reopened:
+          type: integer
+
+    SLAComplianceReport:
+      type: object
+      properties:
+        overall_compliance:
+          type: number
+          description: Overall SLA compliance percentage
+        compliance_by_priority:
+          type: object
+          additionalProperties:
+            type: number
+        total_breaches:
+          type: integer
+        breaches_by_type:
+          type: object
+          properties:
+            response:
+              type: integer
+            resolution:
+              type: integer
+
+    # Admin Schemas
+    SystemSettings:
+      type: object
+      properties:
+        maintenance_mode:
+          type: boolean
+        ticket_number_prefix:
+          type: string
+        default_sla_policy_id:
+          type: string
+          format: uuid
+        max_attachment_size:
+          type: integer
+          description: Max attachment size in MB
+        notification_settings:
+          type: object
+          properties:
+            email_enabled:
+              type: boolean
+            sms_enabled:
+              type: boolean
+            slack_enabled:
+              type: boolean
+        auto_assignment_enabled:
+          type: boolean
+        reopen_window_days:
+          type: integer
+          description: Days within which tickets can be reopened
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        action:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: string
+        details:
+          type: object
+        ip_address:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # Error Schemas
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized - Invalid or missing authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Conflict - Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

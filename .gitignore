@@ -1,0 +1,39 @@
+# Python cache / bytecode
+__pycache__/
+creds.sh
+*.py[cod]
+*.pyo
+*.pyd
+*.cpython-*
+
+# Virtual environments
+venv/
+.env
+.env.*/
+*.env
+
+# Python local packages
+__pypackages__/
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+dist/
+build/
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+
+# Logs / coverage / testing
+*.log
+*.coverage
+.coverage.*
+.cache/
+.claude/
+pytest_cache/
+
+# OS-specific
+.DS_Store
+Thumbs.db

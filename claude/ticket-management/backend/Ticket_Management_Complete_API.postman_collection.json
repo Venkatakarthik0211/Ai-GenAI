@@ -1,0 +1,1632 @@
+{
+	"info": {
+		"_postman_id": "ticket-mgmt-complete-api-collection",
+		"name": "Ticket Management System - Complete API",
+		"description": "Complete API collection for the Ticket Management System based on OpenAPI specification.\n\n**Status: ✅ ALL CORE SERVICES WORKING**\nLast Updated: 2025-11-21\nAuthentication, Admin User Management, and Ticket Management services are fully implemented and functional.\n\n**Implemented Services:**\n- ✅ Authentication Service (Port 8001) - FULLY WORKING\n  - ✅ User registration and login (11 endpoints)\n  - ✅ Admin user management (6 endpoints)\n  - ✅ Admin token management (3 endpoints)\n  - ✅ Admin audit logs (1 endpoint)\n- ✅ Tickets Service (Port 8002) - FULLY WORKING\n  - ✅ Ticket CRUD operations (6 endpoints)\n  - ✅ Ticket workflow (assign, status, resolve, close, reopen, history)\n  - ✅ Comments management (4 endpoints)\n  - ✅ Attachments management (4 endpoints)\n- 🚧 Users Service (Placeholder - use Auth service endpoints)\n- 🚧 Notifications Service (To be implemented)\n- 🚧 SLA Service (To be implemented)\n- 🚧 Analytics Service (To be implemented)\n- 🚧 Escalations Service (To be implemented)\n\n**Base URLs:**\n- Auth Service: http://localhost:8001/api/v1\n- Ticket Service: http://localhost:8002/api/v1\n- Other Services: http://localhost:8000/v1 (when implemented)\n\n**Quick Start:**\n1. Use \"Login as Admin\" (🧪 Test Data folder) to get admin access\n2. Or use \"Register User\" + \"Login\" for regular user access\n3. Tokens auto-populate in collection variables\n4. Create tickets using \"Create Ticket\" endpoint\n5. Manage users via \"Admin: User Management\" section\n\n**Test Users Available:**\n- admin / Admin123! (ADMIN role)\n- john.doe / SecurePass123! (SENIOR_ENGINEER)\n- All test users listed in 🧪 Test Data folder\n\n**Admin User Management:**\n- List all users: GET /auth/admin/users\n- Get user by ID: GET /auth/admin/users/{id}\n- Update user profile: PUT /auth/admin/users/{id}\n- Update user role: PATCH /auth/admin/users/{id}/role\n- Update user status: PATCH /auth/admin/users/{id}/status\n- Delete user: DELETE /auth/admin/users/{id}\n- List user tokens: GET /auth/admin/tokens/user/{id}\n- View audit logs: GET /auth/admin/audit-logs\n\n**Creating Users with Specific Roles:**\n1. Register via POST /auth/register (creates as END_USER)\n2. Update role via PATCH /auth/admin/users/{id}/role (ADMIN only)\n3. See \"Create User with Role (Workaround)\" in Users section\n\n**Ticket Features:**\n- SLA tracking with priority-based response/resolution times\n- Role-based access control (RBAC)\n- Full audit history for all changes\n- File attachments (50MB max)\n- Public and internal comments\n- Status workflow validation\n\nReference: `/api-design/openapi-specification.yaml`\nDatabase Schema: `/backend/db_migrations/README.md`",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"description": "User authentication and authorization endpoints (✅ Implemented)",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('user_id', response.id);",
+									"    pm.collectionVariables.set('username', response.username);",
+									"    pm.collectionVariables.set('email', response.email);",
+									"    console.log('✅ User registered:', response.username, '(', response.role, ')');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"john.doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone_number\": \"+1-555-0100\",\n  \"department\": \"Engineering\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/register",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "Register a new user account. Default role: END_USER\n\n**Password Requirements:**\n- Minimum 8 characters\n- At least one uppercase letter\n- At least one lowercase letter\n- At least one digit\n- At least one special character"
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access_token);",
+									"    pm.collectionVariables.set('refresh_token', response.refresh_token);",
+									"    pm.collectionVariables.set('user_id', response.user.id);",
+									"    pm.collectionVariables.set('user_role', response.user.role);",
+									"    ",
+									"    // Calculate expiry time",
+									"    const expiryTime = new Date(Date.now() + response.expires_in * 1000);",
+									"    pm.collectionVariables.set('token_expiry', expiryTime.toISOString());",
+									"    ",
+									"    console.log('✅ Login successful:', response.user.username);",
+									"    console.log('👤 Role:', response.user.role);",
+									"    console.log('⏰ Token expires:', expiryTime.toLocaleTimeString());",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"john.doe\",\n  \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/login",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Authenticate and receive JWT tokens.\n\n**Returns:**\n- access_token: 15 minutes validity\n- refresh_token: 7 days validity\n\n**Security:**\n- Account locks after 5 failed attempts\n- 30 minute lockout duration"
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access_token);",
+									"    const expiryTime = new Date(Date.now() + response.expires_in * 1000);",
+									"    pm.collectionVariables.set('token_expiry', expiryTime.toISOString());",
+									"    console.log('✅ Token refreshed. Expires:', expiryTime.toLocaleTimeString());",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/refresh",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "refresh"]
+						},
+						"description": "Get new access token using refresh token"
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/logout",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "logout"]
+						},
+						"description": "Logout and revoke tokens"
+					}
+				},
+				{
+					"name": "Get Current User Profile",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/me",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "me"]
+						},
+						"description": "Get authenticated user's profile"
+					}
+				},
+				{
+					"name": "Update User Profile",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone_number\": \"+1-555-0199\",\n  \"department\": \"Engineering - DevOps\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/me",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "me"]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"old_password\": \"SecurePass123!\",\n  \"new_password\": \"NewSecurePass456!\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/change-password",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "change-password"]
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/forgot-password",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "forgot-password"]
+						},
+						"description": "Request password reset token (sent via email)"
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"new_password\": \"NewSecurePass789!\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/reset-password",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "reset-password"]
+						}
+					}
+				},
+				{
+					"name": "List Active Sessions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.sessions && response.sessions.length > 0) {",
+									"        pm.collectionVariables.set('session_id', response.sessions[0].id);",
+									"        console.log('✅ Found', response.total, 'active sessions');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/sessions",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "sessions"]
+						}
+					}
+				},
+				{
+					"name": "Terminate Session",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/sessions/{{session_id}}",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "sessions", "{{session_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👤 Admin: User Management",
+			"description": "Admin endpoints for user management (✅ Implemented - Requires ADMIN role)\n\n**Prerequisites:**\n1. Run \"Login as Admin\" from 🧪 Test Data folder\n2. Access token will auto-populate\n\n**Test Users Available:**\n- john.doe (e8006210-bfd5-4742-955a-6d258029af00)\n- enduser (f3d08c72-fb7f-427a-adb0-587456f3a49a)\n- devops.engineer (a64f5b7d-8d87-4b05-ba62-46443ce7178d)\n- team.lead (ca487846-8ec0-4aff-bcca-eb959edc81cb)\n- admin (461212f0-4941-40bc-b1ac-2bcfff406c1f)",
+			"item": [
+				{
+					"name": "List All Users",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/users?role=END_USER&is_active=true&search=john",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "users"],
+							"query": [
+								{"key": "role", "value": "END_USER", "disabled": true, "description": "Filter by role (END_USER, ADMIN, etc.)"},
+								{"key": "is_active", "value": "true", "disabled": true, "description": "Filter by active status"},
+								{"key": "search", "value": "john", "disabled": true, "description": "Search username, email, or name"}
+							]
+						},
+						"description": "✅ List all users with optional filters (ADMIN only)\n\n**Available Filters:**\n- role: END_USER, DEVOPS_ENGINEER, TEAM_LEAD, SENIOR_ENGINEER, MANAGER, ADMIN\n- is_active: true/false\n- search: Searches username, email, first_name, last_name\n\n**Current Users (6 total):**\nAll users are active END_USER except admin who is ADMIN."
+					}
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/users/{{test_user_id}}",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "users", "{{test_user_id}}"]
+						},
+						"description": "✅ Get user details by ID (ADMIN only)\n\n**Example User IDs:**\n- john.doe: e8006210-bfd5-4742-955a-6d258029af00\n- enduser: f3d08c72-fb7f-427a-adb0-587456f3a49a\n- admin: 461212f0-4941-40bc-b1ac-2bcfff406c1f\n\nUses {{test_user_id}} variable (john.doe by default)"
+					}
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"Name\",\n  \"phone_number\": \"+1-555-9999\",\n  \"department\": \"Engineering\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/users/{{user_id}}",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "users", "{{user_id}}"]
+						},
+						"description": "Update user profile (ADMIN only)"
+					}
+				},
+				{
+					"name": "Update User Role",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"DEVOPS_ENGINEER\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/users/{{test_user_id}}/role",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "users", "{{test_user_id}}", "role"]
+						},
+						"description": "✅ Update user role (ADMIN only)\n\n**Available Roles:**\n- END_USER (Level 0)\n- DEVOPS_ENGINEER (Level 1)\n- SENIOR_ENGINEER (Level 2)\n- TEAM_LEAD (Level 3)\n- MANAGER (Level 4)\n- ADMIN (Level 5)\n\n**Example:** Promote john.doe from END_USER to DEVOPS_ENGINEER\n\n**Security:** Creates audit log with ROLE_CHANGED event"
+					}
+				},
+				{
+					"name": "Update User Status",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"is_active\": false\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/users/{{user_id}}/status",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "users", "{{user_id}}", "status"]
+						},
+						"description": "Activate or deactivate user account (ADMIN only)"
+					}
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/users/{{user_id}}",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "users", "{{user_id}}"]
+						},
+						"description": "Soft delete user (ADMIN only)"
+					}
+				}
+			]
+		},
+		{
+			"name": "🔑 Admin: Token Management",
+			"description": "Admin endpoints for token management (✅ Implemented - Requires ADMIN role)",
+			"item": [
+				{
+					"name": "List User Tokens",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.tokens && response.tokens.length > 0) {",
+									"        pm.collectionVariables.set('token_id', response.tokens[0].id);",
+									"        console.log('✅ Found', response.total, 'tokens,', response.active_tokens, 'active');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/tokens/user/{{user_id}}",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "tokens", "user", "{{user_id}}"]
+						},
+						"description": "List all refresh tokens for a user with device info (ADMIN only)"
+					}
+				},
+				{
+					"name": "Revoke Token",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/tokens/{{token_id}}",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "tokens", "{{token_id}}"]
+						},
+						"description": "Revoke a specific refresh token (ADMIN only)"
+					}
+				},
+				{
+					"name": "Revoke All User Tokens",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/tokens/user/{{user_id}}/revoke-all",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "tokens", "user", "{{user_id}}", "revoke-all"]
+						},
+						"description": "Revoke all refresh tokens for a user and terminate all sessions (ADMIN only)"
+					}
+				}
+			]
+		},
+		{
+			"name": "📋 Admin: Audit Logs",
+			"description": "Admin endpoints for viewing audit logs (✅ Implemented - Requires ADMIN role)",
+			"item": [
+				{
+					"name": "Get Audit Logs",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{auth_base_url}}/auth/admin/audit-logs?user_id={{user_id}}&action_type=LOGIN_SUCCESS&limit=50&offset=0",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "admin", "audit-logs"],
+							"query": [
+								{"key": "user_id", "value": "{{user_id}}", "disabled": true, "description": "Filter by user ID"},
+								{"key": "action_type", "value": "LOGIN_SUCCESS", "disabled": true, "description": "Filter by action type"},
+								{"key": "from_date", "value": "2024-01-01T00:00:00Z", "disabled": true, "description": "Start date"},
+								{"key": "to_date", "value": "2024-12-31T23:59:59Z", "disabled": true, "description": "End date"},
+								{"key": "limit", "value": "50", "description": "Results per page"},
+								{"key": "offset", "value": "0", "description": "Pagination offset"}
+							]
+						},
+						"description": "Get audit logs with filters (ADMIN only)"
+					}
+				}
+			]
+		},
+		{
+			"name": "🎫 Tickets",
+			"description": "Ticket management operations (✅ Implemented - Port 8002)\n\n**Service Details:**\n- Base URL: http://localhost:8002/api/v1\n- Container: ticket-service\n- Database: PostgreSQL (ticket_management)\n- Auth: Bearer token required\n\n**Features:**\n- Full CRUD operations\n- Role-based access control\n- SLA tracking (P1-P4 priorities)\n- Status workflow (NEW→OPEN→IN_PROGRESS→RESOLVED→CLOSED)\n- Full-text search on title/description\n- Pagination and filtering\n\n**Implementation:**\n- Models: /backend/ticket/models.py\n- Routes: /backend/ticket/routes.py\n- Schemas: /backend/ticket/schemas.py",
+			"item": [
+				{
+					"name": "List Tickets",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.tickets && response.tickets.length > 0) {",
+									"        pm.collectionVariables.set('ticket_id', response.tickets[0].id);",
+									"        pm.collectionVariables.set('ticket_number', response.tickets[0].ticket_number);",
+									"        console.log('✅ Found', response.total, 'tickets');",
+									"        console.log('📋 First ticket:', response.tickets[0].ticket_number);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets?page=1&page_size=20&status=OPEN&priority=P1&search=vm",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets"],
+							"query": [
+								{"key": "page", "value": "1", "description": "Page number (default: 1)"},
+								{"key": "page_size", "value": "20", "description": "Items per page (max: 100)"},
+								{"key": "status", "value": "OPEN", "disabled": true, "description": "Filter by status (NEW, OPEN, IN_PROGRESS, RESOLVED, CLOSED)"},
+								{"key": "priority", "value": "P1", "disabled": true, "description": "Filter by priority (P1, P2, P3, P4)"},
+								{"key": "category", "value": "VM_ISSUE", "disabled": true, "description": "Filter by category"},
+								{"key": "assigned_to", "value": "", "disabled": true, "description": "Filter by assignee UUID"},
+								{"key": "requestor_id", "value": "", "disabled": true, "description": "Filter by requestor UUID"},
+								{"key": "search", "value": "vm", "disabled": true, "description": "Full-text search on title and description"},
+								{"key": "sort_by", "value": "created_at", "disabled": true, "description": "Sort field (created_at, updated_at, priority, status, due_date)"},
+								{"key": "order", "value": "desc", "disabled": true, "description": "Sort order (asc, desc)"}
+							]
+						},
+						"description": "✅ List tickets with filtering and pagination\n\n**Filters:**\n- status: NEW, OPEN, IN_PROGRESS, RESOLVED, CLOSED (can pass multiple)\n- priority: P1, P2, P3, P4 (can pass multiple)\n- category: VM_ISSUE, NETWORK_ISSUE, etc.\n- assigned_to: UUID of assignee\n- requestor_id: UUID of ticket creator\n- search: Full-text search on title and description\n\n**Sorting:**\n- sort_by: created_at, updated_at, priority, status, due_date\n- order: asc or desc\n\n**Pagination:**\n- page: Page number (min: 1)\n- page_size: Items per page (min: 1, max: 100)\n\n**Permissions:**\n- END_USER: See only their own tickets\n- Engineers+: See all tickets"
+					}
+				},
+				{
+					"name": "Create Ticket",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('ticket_id', response.id);",
+									"    pm.collectionVariables.set('ticket_number', response.ticket_number);",
+									"    console.log('✅ Ticket created:', response.ticket_number);",
+									"    console.log('🎫 ID:', response.id);",
+									"    console.log('⚡ Priority:', response.priority);",
+									"    console.log('📊 Status:', response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Production VM Not Responding\",\n  \"description\": \"VM prod-server-01 is not responding to ping requests. CPU usage was high before it became unresponsive. Immediate attention required.\",\n  \"category\": \"INCIDENT\",\n  \"priority\": \"P1\",\n  \"environment\": \"PRODUCTION\",\n  \"affected_service\": \"prod-server-01\",\n  \"impact_level\": \"HIGH\",\n  \"tags\": [\"production\", \"urgent\", \"vm\", \"high-priority\"]\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets"]
+						},
+						"description": "✅ Create a new ticket\n\n**Required Fields:**\n- title: String (min 10 chars, max 255 chars)\n- description: String (min 20 chars, detailed description)\n- category: INCIDENT, SERVICE_REQUEST, CHANGE_REQUEST, PROBLEM, or MAINTENANCE\n\n**Optional Fields:**\n- priority: P1 (critical), P2 (high), P3 (medium), P4 (low) - default: P3\n- environment: DEV, QA, STAGING, PRODUCTION, DR\n- affected_service: Name of affected service (max 100 chars)\n- impact_level: LOW, MEDIUM, HIGH, CRITICAL\n- subcategory: String (max 50 chars)\n- tags: Array of strings for categorization\n- assigned_to: UUID of user to assign\n- assigned_team: Team name (max 100 chars)\n\n**Auto-Generated:**\n- ticket_number: Format TKT-YYYY-NNNNN\n- status: NEW (initial status)\n- requestor_id: Current user ID\n- sla_response_due: Based on priority\n- sla_resolution_due: Based on priority\n\n**SLA Response Times:**\n- P1: 1 hour response, 4 hours resolution\n- P2: 4 hours response, 12 hours resolution\n- P3: 8 hours response, 48 hours resolution\n- P4: 24 hours response, 120 hours resolution\n\n**Permissions:**\n- All authenticated users can create tickets"
+					}
+				},
+				{
+					"name": "Get Ticket by ID",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}"]
+						},
+						"description": "✅ Get detailed ticket information by ID\n\n**Returns:**\n- Complete ticket details\n- Requestor and assignee information\n- SLA due dates and breach status\n- Comment count and attachment count\n- Complete audit history\n\n**Permissions:**\n- END_USER: Can view only their own tickets\n- Engineers+: Can view all tickets"
+					}
+				},
+				{
+					"name": "Update Ticket (PUT)",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"[UPDATED] Production VM Not Responding\",\n  \"description\": \"VM prod-server-01 is not responding to ping requests. CPU usage was high before it became unresponsive. Update: Issue confirmed across multiple monitoring systems.\",\n  \"category\": \"INCIDENT\",\n  \"priority\": \"P2\",\n  \"environment\": \"PRODUCTION\",\n  \"affected_service\": \"prod-server-01\",\n  \"impact_level\": \"HIGH\",\n  \"tags\": [\"production\", \"vm\", \"monitoring-confirmed\"]\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}"]
+						},
+						"description": "✅ Full update of ticket (PUT - replaces all fields)\n\n**Required Fields:**\n- title: String (max 255 chars)\n- description: String\n- priority: P1, P2, P3, or P4\n\n**Optional Fields:**\n- category: String\n- tags: Array of strings\n- metadata: JSON object\n\n**Notes:**\n- All fields must be provided (full replacement)\n- Use PATCH for partial updates\n- Status and assignee updated via dedicated endpoints\n- Creates audit history entry\n- Priority change may update SLA dates\n\n**Permissions:**\n- Ticket creator can update (if NEW status)\n- Assigned engineer can update\n- TEAM_LEAD+ can update any ticket"
+					}
+				},
+				{
+					"name": "Update Ticket (PATCH)",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"priority\": \"P1\",\n  \"tags\": [\"production\", \"vm\", \"critical\", \"escalated\"]\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}"]
+						},
+						"description": "✅ Partial update of ticket (PATCH - update specific fields)\n\n**Optional Fields (update only what you provide):**\n- title: String (max 255 chars)\n- description: String\n- category: String\n- priority: P1, P2, P3, or P4\n- tags: Array of strings\n- metadata: JSON object\n\n**Use Cases:**\n- Update only priority without changing description\n- Add/update tags without modifying other fields\n- Update metadata while keeping everything else\n\n**Notes:**\n- Only provided fields are updated\n- Creates audit history for changed fields\n- Priority change may update SLA dates\n\n**Permissions:**\n- Same as PUT endpoint"
+					}
+				},
+				{
+					"name": "Delete Ticket",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}"]
+						},
+						"description": "✅ Soft delete a ticket (sets deleted_at timestamp)\n\n**Behavior:**\n- Ticket is marked as deleted (soft delete)\n- Not permanently removed from database\n- Hidden from normal queries\n- Can be restored by admin if needed\n- Creates audit history entry\n\n**Restrictions:**\n- Cannot delete RESOLVED or CLOSED tickets\n- Cannot delete tickets with active SLA\n\n**Permissions:**\n- ADMIN only\n- MANAGER can delete NEW tickets they created"
+					}
+				},
+				{
+					"name": "Assign Ticket",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"assignee_id\": \"{{user_id}}\",\n  \"notes\": \"Assigning to senior engineer for immediate investigation\"\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/assign",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "assign"]
+						},
+						"description": "✅ Assign ticket to an engineer\n\n**Request Body:**\n- assignee_id: UUID of engineer (required)\n- notes: Reason for assignment (optional)\n\n**Behavior:**\n- Sets assigned_to field\n- Changes status from NEW to OPEN\n- Records assignment in audit history\n- Sends notification to assignee\n- Updates assigned_at timestamp\n\n**Validation:**\n- Assignee must have engineer role or higher\n- Cannot assign to END_USER\n- Cannot assign closed tickets\n\n**Permissions:**\n- DEVOPS_ENGINEER+: Can assign to self\n- TEAM_LEAD+: Can assign to anyone\n- ADMIN: Can assign to anyone"
+					}
+				},
+				{
+					"name": "Update Ticket Status",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PATCH",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"notes\": \"Started investigating the issue. Checking VM logs and system metrics.\"\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/status",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "status"]
+						},
+						"description": "✅ Update ticket status\n\n**Request Body:**\n- status: NEW, OPEN, IN_PROGRESS, RESOLVED, or CLOSED (required)\n- notes: Reason for status change (optional)\n\n**Valid Transitions:**\n- NEW → OPEN (on assignment)\n- OPEN → IN_PROGRESS (engineer starts work)\n- IN_PROGRESS → RESOLVED (issue fixed)\n- RESOLVED → CLOSED (confirmed by requestor)\n- Any → OPEN (reopen)\n\n**Behavior:**\n- Validates status transition\n- Records change in audit history\n- Sends notification to stakeholders\n- Updates status_changed_at timestamp\n- May trigger SLA calculations\n\n**Permissions:**\n- Assigned engineer can update\n- TEAM_LEAD+ can update any ticket"
+					}
+				},
+				{
+					"name": "Resolve Ticket",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"resolution_notes\": \"Identified root cause as high CPU usage due to runaway process. Restarted the VM and verified all services are running. CPU usage is back to normal levels. Implemented additional monitoring alerts.\",\n  \"resolution_time_minutes\": 45\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/resolve",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "resolve"]
+						},
+						"description": "✅ Mark ticket as resolved\n\n**Request Body:**\n- resolution: Description of how issue was fixed (required)\n- resolution_time_minutes: Time taken to resolve in minutes (optional)\n\n**Behavior:**\n- Changes status to RESOLVED\n- Sets resolution text and timestamp\n- Records resolution time\n- Creates audit history entry\n- Calculates if SLA was met\n- Sends notification to requestor\n\n**Next Steps:**\n- Requestor verifies resolution\n- Ticket can be closed or reopened\n\n**Permissions:**\n- Assigned engineer can resolve\n- SENIOR_ENGINEER+ can resolve any ticket"
+					}
+				},
+				{
+					"name": "Close Ticket",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"closure_code\": \"RESOLVED\",\n  \"closure_notes\": \"Verified resolution with requestor. VM is stable and all services are operational. No further issues reported.\",\n  \"satisfaction_rating\": 5\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/close",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "close"]
+						},
+						"description": "✅ Close a resolved ticket\n\n**Request Body:**\n- closure_code: RESOLVED, WORKAROUND, DUPLICATE, CANNOT_REPRODUCE, NOT_AN_ISSUE, CANCELLED, or DEFERRED (required)\n- closure_notes: Final notes (optional)\n- satisfaction_rating: 1-5 rating (optional)\n\n**Closure Codes:**\n- RESOLVED: Issue fully resolved\n- WORKAROUND: Workaround provided\n- DUPLICATE: Duplicate of another ticket\n- CANNOT_REPRODUCE: Cannot reproduce the issue\n- NOT_AN_ISSUE: Not actually an issue\n- CANCELLED: Ticket cancelled\n- DEFERRED: Deferred to future release\n\n**Requirements:**\n- Ticket must be in RESOLVED status\n- Cannot close ticket that was never resolved\n\n**Behavior:**\n- Changes status to CLOSED\n- Sets closure timestamp and code\n- Records satisfaction rating if provided\n- Creates final audit history entry\n- Ticket cannot be modified after closure (except reopen)\n\n**Permissions:**\n- Ticket requestor can close their own ticket\n- Assigned engineer can close\n- TEAM_LEAD+ can close any ticket"
+					}
+				},
+				{
+					"name": "Reopen Ticket",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Issue has recurred. VM became unresponsive again with same symptoms.\"\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/reopen",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "reopen"]
+						},
+						"description": "✅ Reopen a closed or resolved ticket\n\n**Request Body:**\n- reason: Why ticket is being reopened (required)\n\n**Requirements:**\n- Ticket must be RESOLVED or CLOSED\n- Cannot reopen NEW, OPEN, or IN_PROGRESS tickets\n\n**Behavior:**\n- Changes status to OPEN\n- Clears resolution and closure data\n- Increments reopen counter\n- Creates audit history entry\n- Sends notification to assignee\n- Recalculates SLA due dates\n\n**Permissions:**\n- Ticket requestor can reopen their own ticket\n- Assigned engineer can reopen\n- SENIOR_ENGINEER+ can reopen any ticket"
+					}
+				},
+				{
+					"name": "Get Ticket History",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/history",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "history"]
+						},
+						"description": "✅ Get complete audit history for a ticket\n\n**Returns:**\n- Chronological list of all changes\n- Field changes with old/new values\n- User who made each change\n- Timestamp for each change\n- Change type (CREATED, STATUS_CHANGED, ASSIGNED, etc.)\n\n**Change Types:**\n- CREATED: Ticket creation\n- STATUS_CHANGED: Status updates\n- ASSIGNED: Assignment changes\n- PRIORITY_CHANGED: Priority updates\n- COMMENT_ADDED: New comment\n- ATTACHMENT_ADDED: File uploaded\n- UPDATED: Other field changes\n\n**Permissions:**\n- Same as viewing the ticket"
+					}
+				}
+			]
+		},
+		{
+			"name": "💬 Comments",
+			"description": "Ticket comments and discussions (✅ Implemented)\n\n**Features:**\n- Public and internal comments\n- Multiple comment types for categorization\n- Edit tracking with history\n- System-generated comments\n\n**Comment Types:**\n- COMMENT: General comment\n- NOTE: Internal note\n- SOLUTION: Solution documentation\n- WORKAROUND: Temporary workaround\n- STATUS_CHANGE: Status change note\n- ASSIGNMENT_CHANGE: Assignment change note\n- ESCALATION: Escalation note\n\n**Visibility:**\n- is_internal: false = Public (visible to requestor and engineers)\n- is_internal: true = Internal (only visible to engineers)",
+			"item": [
+				{
+					"name": "Get Ticket Comments",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.comments && response.comments.length > 0) {",
+									"        pm.collectionVariables.set('comment_id', response.comments[0].id);",
+									"        console.log('✅ Found', response.total, 'comments');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/comments?is_internal=false",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "comments"],
+							"query": [
+								{"key": "is_internal", "value": "false", "disabled": true, "description": "Filter: false=public only, true=internal only, omit=all"},
+								{"key": "comment_type", "value": "COMMENT", "disabled": true, "description": "Filter by type: COMMENT, NOTE, SOLUTION, etc."}
+							]
+						},
+						"description": "✅ Get all comments for a ticket\n\n**Query Parameters:**\n- is_internal: Filter by visibility (optional)\n  - false: Public comments only\n  - true: Internal comments only\n  - omit: All comments\n- comment_type: Filter by type: COMMENT, NOTE, SOLUTION, WORKAROUND, etc. (optional)\n\n**Behavior:**\n- END_USER: See only public comments (is_internal=false)\n- Engineers+: See all comments (public and internal)\n- Returns comments in chronological order\n- Includes author information\n- Shows edit history if comment was edited\n\n**Permissions:**\n- Same as viewing the ticket"
+					}
+				},
+				{
+					"name": "Add Comment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('comment_id', response.id);",
+									"    console.log('✅ Comment added:', response.id);",
+									"    console.log('💬 Type:', response.comment_type);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Investigating the root cause. Initial findings suggest CPU spike due to batch job. Will provide detailed update in 30 minutes with resolution plan.\",\n  \"comment_type\": \"COMMENT\",\n  \"is_internal\": false\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/comments",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "comments"]
+						},
+						"description": "✅ Add a comment to a ticket\n\n**Request Body:**\n- content: Comment text (required, max 2000 chars)\n- comment_type: COMMENT, NOTE, SOLUTION, WORKAROUND, STATUS_CHANGE, ASSIGNMENT_CHANGE, or ESCALATION (default: COMMENT)\n- is_internal: Boolean - true for internal notes, false for public (default: false)\n\n**Comment Types:**\n- COMMENT: General comment\n- NOTE: Internal note  \n- SOLUTION: Solution documentation\n- WORKAROUND: Temporary workaround\n- STATUS_CHANGE: Status change note\n- ASSIGNMENT_CHANGE: Assignment change note\n- ESCALATION: Escalation note\n\n**Visibility:**\n- is_internal=false: Visible to ticket requestor and all engineers (public)\n- is_internal=true: Only visible to engineers (private notes/discussion)\n\n**Behavior:**\n- Creates audit history entry\n- Sends notification to ticket stakeholders\n- Updates ticket's updated_at timestamp\n- Records comment author and timestamp\n\n**Permissions:**\n- All authenticated users can add public comments\n- Only engineers can add internal comments"
+					}
+				},
+				{
+					"name": "Update Comment",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"[UPDATED] Root cause confirmed: Runaway batch job consuming excessive CPU. Implementing fix now.\"\n}"
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/comments/{{comment_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "comments", "{{comment_id}}"]
+						},
+						"description": "✅ Update (edit) an existing comment\n\n**Request Body:**\n- content: New comment text (required, max 2000 chars)\n\n**Behavior:**\n- Updates comment content\n- Marks comment as edited\n- Records edit timestamp\n- Preserves original content in edit history\n- Cannot change comment type (PUBLIC/INTERNAL)\n\n**Restrictions:**\n- Can only edit within 30 minutes of posting\n- Cannot edit comments on closed tickets\n\n**Permissions:**\n- Comment author can edit their own comments\n- TEAM_LEAD+ can edit any comment"
+					}
+				},
+				{
+					"name": "Delete Comment",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/comments/{{comment_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "comments", "{{comment_id}}"]
+						},
+						"description": "✅ Soft delete a comment\n\n**Behavior:**\n- Marks comment as deleted (soft delete)\n- Comment content replaced with \"[deleted]\"\n- Not permanently removed from database\n- Preserves audit trail\n- Cannot be undone\n\n**Restrictions:**\n- Cannot delete comments on closed tickets\n- Cannot delete system-generated comments\n\n**Permissions:**\n- Comment author can delete within 1 hour of posting\n- MANAGER+ can delete any comment\n- ADMIN can delete any comment"
+					}
+				}
+			]
+		},
+		{
+			"name": "📎 Attachments",
+			"description": "File attachment operations (✅ Implemented)\n\n**Features:**\n- File upload with validation\n- Secure file storage\n- File type restrictions\n- Size limits (50MB max)\n- SHA-256 hash verification\n\n**Supported File Types:**\n- Images: jpg, jpeg, png, gif, bmp\n- Documents: pdf, doc, docx, xls, xlsx, txt, csv\n- Archives: zip, tar, gz\n- Logs: log, json, xml",
+			"item": [
+				{
+					"name": "List Attachments",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.attachments && response.attachments.length > 0) {",
+									"        pm.collectionVariables.set('attachment_id', response.attachments[0].id);",
+									"        console.log('✅ Found', response.total, 'attachments');",
+									"        console.log('📎 First file:', response.attachments[0].filename);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/attachments",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "attachments"]
+						},
+						"description": "✅ List all attachments for a ticket\n\n**Returns:**\n- File metadata (name, size, type)\n- Upload timestamp\n- Uploader information\n- File hash (SHA-256)\n- Storage location\n\n**Permissions:**\n- Same as viewing the ticket"
+					}
+				},
+				{
+					"name": "Upload Attachment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('attachment_id', response.id);",
+									"    console.log('✅ File uploaded:', response.filename);",
+									"    console.log('📦 Size:', response.file_size, 'bytes');",
+									"    console.log('🔒 Hash:', response.file_hash);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{"key": "file", "description": "File to upload (required)", "type": "file", "src": []},
+								{"key": "description", "value": "Screenshot showing the VM error message and CPU metrics", "description": "File description (optional)", "type": "text"}
+							]
+						},
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/{{ticket_id}}/attachments",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "attachments"]
+						},
+						"description": "✅ Upload a file attachment to a ticket\n\n**Form Data:**\n- file: The file to upload (required)\n- description: Description of the file (optional)\n\n**File Restrictions:**\n- Max size: 50MB\n- Allowed types: images (jpg, png, gif), docs (pdf, docx, xlsx), archives (zip), logs (log, json, xml)\n\n**Validation:**\n- File extension checked\n- MIME type verified\n- Virus scanning (if configured)\n- SHA-256 hash calculated\n\n**Storage:**\n- Files stored in /app/uploads directory\n- Original filename preserved\n- Unique ID assigned\n\n**Permissions:**\n- Same as adding comments to the ticket"
+					}
+				},
+				{
+					"name": "Download Attachment",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/attachments/{{attachment_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "attachments", "{{attachment_id}}"]
+						},
+						"description": "✅ Download an attachment file\n\n**Returns:**\n- File content as binary stream\n- Original filename in Content-Disposition header\n- Correct MIME type in Content-Type header\n\n**Behavior:**\n- Streams file directly from storage\n- Validates file hash before serving\n- Tracks download count\n- Logs access for audit\n\n**Permissions:**\n- Same as viewing the parent ticket"
+					}
+				},
+				{
+					"name": "Delete Attachment",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{ticket_base_url}}/tickets/attachments/{{attachment_id}}",
+							"host": ["{{ticket_base_url}}"],
+							"path": ["tickets", "attachments", "{{attachment_id}}"]
+						},
+						"description": "✅ Delete an attachment\n\n**Behavior:**\n- Soft delete (marks as deleted)\n- File remains in storage for audit\n- Creates audit history entry\n- Cannot be undone\n\n**Restrictions:**\n- Cannot delete attachments on closed tickets\n- File size quota is not reclaimed\n\n**Permissions:**\n- Uploader can delete within 1 hour\n- Ticket assignee can delete\n- MANAGER+ can delete any attachment\n- ADMIN can delete any attachment"
+					}
+				}
+			]
+		},
+		{
+			"name": "👥 Users",
+			"description": "User management operations (🚧 To be implemented)\n\n**Note:** For admin user management, use the \"👤 Admin: User Management\" section under Authentication.\nThese endpoints ({{base_url}}/users) are placeholders for a future centralized user service.\n\n**Current Working Approach:**\n1. Register user: Use /auth/register (creates as END_USER)\n2. Update role: Use /auth/admin/users/{id}/role (ADMIN only)\n3. Manage users: Use /auth/admin/users/* endpoints",
+			"item": [
+				{
+					"name": "List Users (Not Implemented)",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users?role=DEVOPS_ENGINEER&is_active=true",
+							"host": ["{{base_url}}"],
+							"path": ["users"],
+							"query": [
+								{"key": "role", "value": "DEVOPS_ENGINEER", "disabled": true},
+								{"key": "is_active", "value": "true", "disabled": true},
+								{"key": "search", "value": "", "disabled": true}
+							]
+						},
+						"description": "🚧 Not implemented. Use {{auth_base_url}}/auth/admin/users instead."
+					}
+				},
+				{
+					"name": "Create User with Role (Workaround)",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"new.user\",\n  \"email\": \"new.user@example.com\",\n  \"password\": \"TempPass123!\",\n  \"first_name\": \"New\",\n  \"last_name\": \"User\",\n  \"department\": \"Operations\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/register",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "✅ Working Approach:\n\n1. Register user via /auth/register (creates as END_USER)\n2. Then use 'Update User Role' endpoint to set desired role\n\n**Note:** Direct {{base_url}}/users POST endpoint not implemented.\n\nAfter registration:\n- Save the returned user_id\n- Use PATCH /auth/admin/users/{user_id}/role to set role to DEVOPS_ENGINEER, TEAM_LEAD, etc.\n\nSee 'Update User Role' in 'Admin: User Management' section."
+					}
+				},
+				{
+					"name": "Get User by ID (Not Implemented)",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						},
+						"description": "🚧 Not implemented. Use {{auth_base_url}}/auth/admin/users/{user_id} instead."
+					}
+				},
+				{
+					"name": "Update User (Not Implemented)",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"first_name\": \"Updated\",\n  \"last_name\": \"Name\",\n  \"department\": \"Engineering\",\n  \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						},
+						"description": "🚧 Not implemented. Use {{auth_base_url}}/auth/admin/users/{user_id} instead."
+					}
+				},
+				{
+					"name": "Deactivate User (Not Implemented)",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}"]
+						},
+						"description": "🚧 Not implemented. Use PATCH {{auth_base_url}}/auth/admin/users/{user_id}/status or DELETE {{auth_base_url}}/auth/admin/users/{user_id} instead."
+					}
+				},
+				{
+					"name": "Get User's Tickets",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}/tickets?type=assigned",
+							"host": ["{{base_url}}"],
+							"path": ["users", "{{user_id}}", "tickets"],
+							"query": [{"key": "type", "value": "assigned"}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🚨 Escalations",
+			"description": "Ticket escalation operations (🚧 To be implemented)",
+			"item": [
+				{
+					"name": "Escalate Ticket",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"SLA breach imminent - requires senior engineer attention\",\n  \"escalate_to\": \"{{senior_engineer_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tickets/{{ticket_id}}/escalate",
+							"host": ["{{base_url}}"],
+							"path": ["tickets", "{{ticket_id}}", "escalate"]
+						}
+					}
+				},
+				{
+					"name": "Acknowledge Escalation",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/escalations/{{escalation_id}}/acknowledge",
+							"host": ["{{base_url}}"],
+							"path": ["escalations", "{{escalation_id}}", "acknowledge"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⏱️ SLA",
+			"description": "SLA policy management (🚧 To be implemented)",
+			"item": [
+				{
+					"name": "List SLA Policies",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sla/policies",
+							"host": ["{{base_url}}"],
+							"path": ["sla", "policies"]
+						}
+					}
+				},
+				{
+					"name": "Create SLA Policy",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"P1 Critical SLA\",\n  \"priority\": \"P1_CRITICAL\",\n  \"category\": \"VM_ISSUE\",\n  \"response_time\": 15,\n  \"resolution_time\": 4,\n  \"escalation_threshold\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/sla/policies",
+							"host": ["{{base_url}}"],
+							"path": ["sla", "policies"]
+						}
+					}
+				},
+				{
+					"name": "Get SLA Policy",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sla/policies/{{policy_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["sla", "policies", "{{policy_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update SLA Policy",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated P1 SLA\",\n  \"response_time\": 10,\n  \"resolution_time\": 3,\n  \"escalation_threshold\": 20,\n  \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/sla/policies/{{policy_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["sla", "policies", "{{policy_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get SLA Breaches",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/sla/breaches?from_date=2024-01-01&to_date=2024-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["sla", "breaches"],
+							"query": [
+								{"key": "from_date", "value": "2024-01-01", "disabled": true},
+								{"key": "to_date", "value": "2024-12-31", "disabled": true}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔔 Notifications",
+			"description": "Notification management (🚧 To be implemented)",
+			"item": [
+				{
+					"name": "Get Notifications",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications?read=false&limit=50",
+							"host": ["{{base_url}}"],
+							"path": ["notifications"],
+							"query": [
+								{"key": "read", "value": "false", "disabled": true},
+								{"key": "limit", "value": "50"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/{{notification_id}}/read",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "{{notification_id}}", "read"]
+						}
+					}
+				},
+				{
+					"name": "Mark All as Read",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/notifications/read-all",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "read-all"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Analytics",
+			"description": "Reports and analytics endpoints (🚧 To be implemented)",
+			"item": [
+				{
+					"name": "Get Dashboard Metrics",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/dashboard?from_date=2024-01-01&to_date=2024-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "dashboard"],
+							"query": [
+								{"key": "from_date", "value": "2024-01-01", "disabled": true},
+								{"key": "to_date", "value": "2024-12-31", "disabled": true}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Ticket Metrics",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/tickets/metrics?group_by=priority",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "tickets", "metrics"],
+							"query": [
+								{"key": "from_date", "value": "", "disabled": true},
+								{"key": "to_date", "value": "", "disabled": true},
+								{"key": "group_by", "value": "priority"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get User Performance",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/users/performance?user_id={{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "users", "performance"],
+							"query": [
+								{"key": "from_date", "value": "", "disabled": true},
+								{"key": "to_date", "value": "", "disabled": true},
+								{"key": "user_id", "value": "{{user_id}}", "disabled": true}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get SLA Compliance",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/sla/compliance",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "sla", "compliance"],
+							"query": [
+								{"key": "from_date", "value": "", "disabled": true},
+								{"key": "to_date", "value": "", "disabled": true}
+							]
+						}
+					}
+				},
+				{
+					"name": "Export Report",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/analytics/reports/export?report_type=tickets&format=pdf",
+							"host": ["{{base_url}}"],
+							"path": ["analytics", "reports", "export"],
+							"query": [
+								{"key": "report_type", "value": "tickets"},
+								{"key": "format", "value": "pdf"},
+								{"key": "from_date", "value": "", "disabled": true},
+								{"key": "to_date", "value": "", "disabled": true}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⚙️ Admin",
+			"description": "Administrative operations (🚧 To be implemented)",
+			"item": [
+				{
+					"name": "Get System Settings",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/settings",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "settings"]
+						}
+					}
+				},
+				{
+					"name": "Update System Settings",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"maintenance_mode\": false,\n  \"ticket_number_prefix\": \"TKT\",\n  \"max_attachment_size\": 10,\n  \"notification_settings\": {\n    \"email_enabled\": true,\n    \"sms_enabled\": false,\n    \"slack_enabled\": true\n  },\n  \"auto_assignment_enabled\": true,\n  \"reopen_window_days\": 7\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/settings",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "settings"]
+						}
+					}
+				},
+				{
+					"name": "Get Audit Logs",
+					"request": {
+						"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/audit-logs?action=LOGIN&from_date=2024-01-01",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "audit-logs"],
+							"query": [
+								{"key": "user_id", "value": "", "disabled": true},
+								{"key": "action", "value": "LOGIN", "disabled": true},
+								{"key": "from_date", "value": "2024-01-01", "disabled": true},
+								{"key": "to_date", "value": "", "disabled": true}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🧪 Test Data",
+			"description": "Test users for different roles - ✅ ALL CREATED AND VERIFIED\n\n**Available Test Users:**\n- john.doe / SecurePass123! (END_USER)\n- enduser / EndUser123! (END_USER)\n- devops.engineer / DevOps123! (END_USER)\n- team.lead / TeamLead123! (END_USER)\n- admin / Admin123! (ADMIN) ✅\n\n**Note:** Admin role was manually set in database. New registrations default to END_USER role.",
+			"item": [
+				{
+					"name": "Login as Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('access_token', response.access_token);",
+									"    pm.collectionVariables.set('refresh_token', response.refresh_token);",
+									"    pm.collectionVariables.set('admin_user_id', response.user.id);",
+									"    pm.collectionVariables.set('user_role', response.user.role);",
+									"    console.log('✅ Admin login successful:', response.user.username);",
+									"    console.log('👤 Role:', response.user.role);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/login",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "✅ VERIFIED WORKING\nLogin as admin user to access admin endpoints.\n\nCredentials:\n- Username: admin\n- Password: Admin123!\n- Role: ADMIN\n- User ID: 461212f0-4941-40bc-b1ac-2bcfff406c1f"
+					}
+				},
+				{
+					"name": "Create END_USER",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"enduser\",\n  \"email\": \"enduser@example.com\",\n  \"password\": \"EndUser123!\",\n  \"first_name\": \"End\",\n  \"last_name\": \"User\",\n  \"department\": \"Support\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/register",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "✅ Already created\nUser ID: f3d08c72-fb7f-427a-adb0-587456f3a49a"
+					}
+				},
+				{
+					"name": "Create DEVOPS_ENGINEER",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"devops.engineer\",\n  \"email\": \"devops@example.com\",\n  \"password\": \"DevOps123!\",\n  \"first_name\": \"DevOps\",\n  \"last_name\": \"Engineer\",\n  \"department\": \"Infrastructure\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/register",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "✅ Already created\nUser ID: a64f5b7d-8d87-4b05-ba62-46443ce7178d"
+					}
+				},
+				{
+					"name": "Create TEAM_LEAD",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"team.lead\",\n  \"email\": \"teamlead@example.com\",\n  \"password\": \"TeamLead123!\",\n  \"first_name\": \"Team\",\n  \"last_name\": \"Lead\",\n  \"department\": \"Engineering\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/register",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "✅ Already created\nUser ID: ca487846-8ec0-4aff-bcca-eb959edc81cb"
+					}
+				},
+				{
+					"name": "Create ADMIN User",
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin123!\",\n  \"first_name\": \"System\",\n  \"last_name\": \"Administrator\",\n  \"department\": \"IT\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_base_url}}/auth/register",
+							"host": ["{{auth_base_url}}"],
+							"path": ["auth", "register"]
+						},
+						"description": "✅ Already created\nUser ID: 461212f0-4941-40bc-b1ac-2bcfff406c1f\n\n⚠️ Note: This creates user with END_USER role.\nTo make ADMIN, run SQL:\nUPDATE users SET role = 'ADMIN' WHERE username = 'admin';\n\nOr use the Admin endpoint to update role after logging in as existing admin."
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Check if access token is about to expire",
+					"const tokenExpiry = pm.collectionVariables.get('token_expiry');",
+					"if (tokenExpiry) {",
+					"    const now = new Date().getTime();",
+					"    const expiry = new Date(tokenExpiry).getTime();",
+					"    const minutesLeft = Math.floor((expiry - now) / 60000);",
+					"    ",
+					"    if (minutesLeft < 2 && minutesLeft > 0) {",
+					"        console.warn('⚠️ Token expires in', minutesLeft, 'minute(s). Consider refreshing.');",
+					"    } else if (minutesLeft <= 0) {",
+					"        console.error('❌ Token has expired. Please refresh or login again.');",
+					"    }",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Log response status",
+					"if (pm.response.code >= 400) {",
+					"    console.error('❌ Request failed:', pm.response.code, pm.response.status);",
+					"    try {",
+					"        console.error('Error details:', pm.response.json());",
+					"    } catch (e) {}",
+					"} else if (pm.response.code >= 200 && pm.response.code < 300) {",
+					"    console.log('✅ Success:', pm.response.code, pm.response.status);",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/v1",
+			"type": "string",
+			"description": "Base URL for Tickets, Users, and other services (when implemented)"
+		},
+		{
+			"key": "auth_base_url",
+			"value": "http://localhost:8001/api/v1",
+			"type": "string",
+			"description": "Base URL for Authentication Service"
+		},
+		{
+			"key": "ticket_base_url",
+			"value": "http://localhost:8002/api/v1",
+			"type": "string",
+			"description": "Base URL for Ticket Service (Port 8002)"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string",
+			"description": "JWT access token (auto-populated on login)"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string",
+			"description": "JWT refresh token (auto-populated on login)"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string",
+			"description": "Current user ID"
+		},
+		{
+			"key": "username",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "email",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_role",
+			"value": "",
+			"type": "string",
+			"description": "Current user role"
+		},
+		{
+			"key": "session_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ticket_id",
+			"value": "",
+			"type": "string",
+			"description": "Current ticket UUID (auto-populated from responses)"
+		},
+		{
+			"key": "ticket_number",
+			"value": "",
+			"type": "string",
+			"description": "Current ticket number in format TKT-YYYY-NNNNN (auto-populated from responses)"
+		},
+		{
+			"key": "comment_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "attachment_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "notification_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "escalation_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "policy_id",
+			"value": "",
+			"type": "string",
+			"description": "SLA Policy ID"
+		},
+		{
+			"key": "senior_engineer_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "token_expiry",
+			"value": "",
+			"type": "string",
+			"description": "Token expiry timestamp"
+		},
+		{
+			"key": "token_id",
+			"value": "",
+			"type": "string",
+			"description": "Refresh token ID for admin operations"
+		},
+		{
+			"key": "admin_user_id",
+			"value": "461212f0-4941-40bc-b1ac-2bcfff406c1f",
+			"type": "string",
+			"description": "Admin user ID (admin@example.com)"
+		},
+		{
+			"key": "test_user_id",
+			"value": "e8006210-bfd5-4742-955a-6d258029af00",
+			"type": "string",
+			"description": "Test user ID (john.doe@example.com)"
+		}
+	]
+}

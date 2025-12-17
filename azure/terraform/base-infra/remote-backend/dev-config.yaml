@@ -1,0 +1,6 @@
+# terraform init -backend-config=dev-backend.config
+# terraform destroy -var="environment=dev" -auto-approve
+azure_region: eastus
+remote_backend_resource_group_name: personal-workspace-backend-rg
+container_name: tfstate
+environment: dev

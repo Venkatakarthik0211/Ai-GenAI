@@ -1,0 +1,28 @@
+# MLflow Dockerfile with PostgreSQL Support
+# Extends official MLflow image to add psycopg2 for PostgreSQL backend
+
+FROM ghcr.io/mlflow/mlflow:v2.10.0
+
+# Switch to root to install system packages
+USER root
+
+# Install PostgreSQL client libraries and curl for health checks
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PostgreSQL driver for Python
+RUN pip install --no-cache-dir psycopg2-binary
+
+# Create directory for artifacts
+RUN mkdir -p /mlflow/artifacts && chmod 777 /mlflow/artifacts
+
+# Switch back to non-root user if MLflow image has one
+# (MLflow v2.10.0 runs as root by default, so this is optional)
+
+# Expose MLflow port
+EXPOSE 5000
+
+# Use the default MLflow entrypoint
+# The CMD will be provided by docker-compose

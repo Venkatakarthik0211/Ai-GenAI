@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  analyzer:
+    build: .
+    image: langgraph-md-analyzer
+    container_name: langgraph-md-analyzer
+    stdin_open: true  # Enable interactive mode
+    tty: true         # Allocate a pseudo-TTY
+    environment:
+      # AWS configuration paths
+      - AWS_CONFIG_FILE=/root/.aws/config
+      - AWS_SHARED_CREDENTIALS_FILE=/root/.aws/credentials
+      - AWS_REGION=us-east-1
+      - AWS_PROFILE=default
+
+    volumes:
+      # Mount files directory - place your markdown files here (READ-WRITE)
+      - ./files:/workspace/files:rw
+
+      # Mount logs directory for output and visualizations (READ-WRITE)
+      - ./logs:/workspace/logs:rw
+
+      # Mount AWS credentials from host (REQUIRED for Bedrock)
+      - ${HOME}/.aws:/root/.aws:ro
+
+    restart: "no"

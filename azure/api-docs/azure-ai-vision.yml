@@ -1,0 +1,50 @@
+openapi: 3.0.0
+info:
+  title: AI Vision Dataset API
+  version: 1.0.0
+paths:
+  /datasets:
+    post:
+      summary: Create a new dataset
+      responses:
+        '201':
+          description: Operation completed successfully
+        '400':
+          description: The request was malformed
+        '409':
+          description: A dataset with the specified name already exists
+    delete:
+      summary: Unregister a dataset
+      responses:
+        '204':
+          description: Operation completed successfully
+        '400':
+          description: The request was malformed
+        '404':
+          description: A dataset with the specified name was not found
+    get:
+      summary: Get information about a specific dataset
+      responses:
+        '200':
+          description: Operation completed successfully
+        '400':
+          description: The request was malformed
+        '404':
+          description: A dataset with the specified name was not found
+    put:
+      summary: Update the properties of an existing dataset
+      responses:
+        '200':
+          description: Operation completed successfully
+        '400':
+          description: The request was malformed
+        '404':
+          description: A dataset with the specified name was not found
+  /datasets/list:
+    get:
+      summary: Get a list of registered datasets
+      responses:
+        '200':
+          description: Operation completed successfully
+        '400':
+          description: The request was malformed

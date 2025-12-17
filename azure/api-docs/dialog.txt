@@ -1,0 +1,25 @@
+https://learn.microsoft.com/en-us/azure/bot-service/bot-builder-concept-dialog?view=azure-bot-service-4.0
+
+Dialog Classes:
+
+Dialog set	Defines a collection of dialogs that can reference each other and work in concert.
+Dialog context	Contains information about all active dialogs.
+Dialog instance	Contains information about one active dialog.
+Dialog turn result	Contains status information from an active, or recently active, dialog. If the active dialog ended, this contains its return value.
+
+
+                                    dialog
+                                      |
+                    +----------------+----------------+
+                    |                               |
+              container dialog                  prompt dialogs
+                    |
+        +-----------+-----------+-----------+
+        |           |           |           |
+ component dialog   |     adaptive dialog skill dialog
+        |     waterfall dialog      |
+        |                     action dialogs
+        |                           |
+        |                    input dialogs
+        |
+    QnA Maker dialog

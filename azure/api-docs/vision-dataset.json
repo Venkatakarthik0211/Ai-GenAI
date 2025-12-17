@@ -1,0 +1,188 @@
+openapi: 3.0.0
+info:
+  title: Azure AI Services - Computer Vision - Dataset Management
+  description: API for managing datasets for the Azure AI Services - Computer Vision.
+  version: 2023-02-01-preview
+servers:
+  - url: https://{your_region}.api.cognitive.microsoft.com/vision/v3.2
+    description: Azure AI Services endpoint
+    variables:
+      your_region:
+        default: westus
+        description: Region for the Azure service
+paths:
+  /datasets/{datasetId}:
+    get:
+      summary: Get Information About a Specific Dataset
+      description: Retrieve detailed information about a specific dataset by providing its `datasetId`.
+      operationId: getDataset
+      parameters:
+        - name: datasetId
+          in: path
+          required: true
+          description: ID of the dataset to retrieve
+          schema:
+            type: string
+        - name: api-key
+          in: header
+          required: true
+          description: Azure API key for authentication
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operation completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  size:
+                    type: integer
+                  createdDate:
+                    type: string
+                  status:
+                    type: string
+        '400':
+          description: The request was malformed
+        '404':
+          description: No dataset found with the specified ID
+    patch:
+      summary: Update an Existing Dataset
+      description: Update the properties of an existing dataset by providing its `datasetId`.
+      operationId: updateDataset
+      parameters:
+        - name: datasetId
+          in: path
+          required: true
+          description: ID of the dataset to update
+          schema:
+            type: string
+        - name: api-key
+          in: header
+          required: true
+          description: Azure API key for authentication
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Operation completed successfully
+        '400':
+          description: The request was malformed
+        '404':
+          description: No dataset found with the specified ID
+  /datasets:
+    get:
+      summary: List Datasets
+      description: Retrieve a list of all datasets registered on the service.
+      operationId: listDatasets
+      parameters:
+        - name: api-key
+          in: header
+          required: true
+          description: Azure API key for authentication
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operation completed successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    description:
+                      type: string
+                    size:
+                      type: integer
+                    createdDate:
+                      type: string
+                    status:
+                      type: string
+        '400':
+          description: The request was malformed
+    post:
+      summary: Register a New Dataset
+      description: Register a new dataset with the Azure Computer Vision service.
+      operationId: registerDataset
+      parameters:
+        - name: api-key
+          in: header
+          required: true
+          description: Azure API key for authentication
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                dataUrl:
+                  type: string
+      responses:
+        '201':
+          description: Dataset registered successfully
+        '400':
+          description: The request was malformed
+        '409':
+          description: A dataset with the specified name already exists
+  /datasets/{datasetId}:
+    delete:
+      summary: Unregister a Dataset
+      description: Remove an existing dataset from the Azure Computer Vision service.
+      operationId: unregisterDataset
+      parameters:
+        - name: datasetId
+          in: path
+          required: true
+          description: ID of the dataset to remove
+          schema:
+            type: string
+        - name: api-key
+          in: header
+          required: true
+          description: Azure API key for authentication
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Dataset unregistered successfully
+        '400':
+          description: The request was malformed
+        '404':
+          description: No dataset found with the specified ID
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: api-key
+      in: header
